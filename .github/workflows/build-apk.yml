@@ -78,9 +78,6 @@ jobs:
           export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
 
 
-          ls -la $ANDROID_HOME/cmdline-tools/latest/bin
-
-
           sdkmanager --version
 
 
@@ -121,9 +118,9 @@ jobs:
       - name: Build APK
         run: |
 
-          yes | buildozer android clean
+          rm -rf .buildozer
 
-          yes | buildozer android debug
+          buildozer android debug
 
 
 
