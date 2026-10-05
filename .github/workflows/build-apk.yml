@@ -11,24 +11,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 拉取代码
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: 安装环境
-        run: |
-          sudo apt update
-          sudo apt install -y python3-pip git zip unzip openjdk-17-jdk
+    - name: 安装环境
+      run: |
+        sudo apt update
+        sudo apt install -y python3-pip git zip unzip openjdk-17-jdk
 
-      - name: 安装 Buildozer
-        run: |
-          pip3 install --user buildozer cython
+    - name: 安装Buildozer
+      run: |
+        pip3 install --user buildozer cython
 
-      - name: 编译 APK
-        run: |
-          ~/.local/bin/buildozer android debug
+    - name: 接受Android许可
+      run: |
+        yes | ~/.local/bin/buildozer android update
 
-      - name: 上传 APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: apk
-          path: bin/*.apk
+    - name: 编译APK
+      run: |
+        ~/.local/bin/buildozer android debug
+
+    - name: 保存APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: apk
+        path: bin/*.apk
