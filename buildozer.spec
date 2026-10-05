@@ -1,3 +1,4 @@
+[app]
 title = BiliPink
 
 package.name = bilipink
