@@ -32,10 +32,13 @@ orientation = portrait
 # Android权限
 android.permissions = INTERNET,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE
 
+android.api = 35
+android.ndk = 27b
+android.build_tools = 37.0.0
+android.minapi = 24
 
 # Android架构
 android.archs = arm64-v8a
-
 
 # 不使用全屏
 fullscreen = 0
@@ -44,17 +47,13 @@ fullscreen = 0
 
 [buildozer]
 
-
 # 日志等级
 log_level = 2
-
 
 # 编译警告
 warn_on_root = 1
 
 
-
 [python-for-android]
-
-# 使用最新版本
-p4a.branch = master
+# 不用master开发分支，改用稳定发布分支
+p4a.branch = release-2022.12.20
