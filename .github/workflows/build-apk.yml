@@ -1,60 +1,27 @@
-name: Build APK
-
-on:
-  push:
-    branches:
-      - main
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-
-      - name: 检出代码
-        uses: actions/checkout@v4
-
-      - name: 安装环境
+- name: 安装 Android SDK
         run: |
-          sudo apt update
-          sudo apt install -y python3-pip git zip unzip openjdk-17-jdk
-
-      - name: 安装 Android SDK
-        run: |
-          export ANDROID_HOME=$HOME/android-sdk
-
           mkdir -p $ANDROID_HOME/cmdline-tools
 
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
 
-          unzip -q commandlinetools-linux-11076708_latest.zip -d $ANDROID_HOME/cmdline-tools
+          unzip -q commandlinetools-linux-11076708_latest.zip \
+          -d $ANDROID_HOME/cmdline-tools
 
-          mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
+          mkdir -p $ANDROID_HOME/cmdline-tools/latest
+
+          mv $ANDROID_HOME/cmdline-tools/cmdline-tools/* \
+          $ANDROID_HOME/cmdline-tools/latest/
+
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
 
           export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
 
           yes | sdkmanager --licenses
 
-          sdkmanager "platform-tools"
-          sdkmanager "platforms;android-34"
-          sdkmanager "build-tools;34.0.0"
+          sdkmanager \
+          "platform-tools" \
+          "platforms;android-35" \
+          "build-tools;35.0.0"
 
-      - name: 安装 Buildozer
-        run: |
-          pip3 install --user buildozer cython==0.29.36
-
-      - name: 编译 APK
-        run: |
-          export ANDROID_HOME=$HOME/android-sdk
-          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
-          export PATH=$PATH:$ANDROID_HOME/platform-tools
-
-          yes | sdkmanager --licenses
-
-          ~/.local/bin/buildozer android debug
-
-      - name: 保存 APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: apk
-          path: bin/*.apk
+          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+          echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
