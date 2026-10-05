@@ -1,7 +1,6 @@
-name: Build APK
+name: 构建 APK
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
@@ -11,51 +10,47 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
-      - name: 检出代码
+      - name: 检出源代码
         uses: actions/checkout@v4
 
-
-      - name: 安装环境
+      - name: 安装系统依赖
         run: |
-          sudo apt update
-          sudo apt install -y \
+          sudo apt-get update
+          sudo apt-get install -y \
+            python3 \
             python3-pip \
+            python3-venv \
             git \
             zip \
             unzip \
             openjdk-17-jdk
 
-
-      - name: 安装 Android SDK
-        run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
-          "platform-tools" \
-          "platforms;android-35" \
-          "build-tools;35.0.0"
-
-
       - name: 安装 Buildozer
         run: |
-          pip3 install --user buildozer
-          pip3 install --user cython==0.29.36
+          python3 -m pip install --user --upgrade pip
+          python3 -m pip install --user buildozer cython==0.29.37
 
-
-      - name: 清理缓存
+      - name: 配置 PATH
         run: |
-          rm -rf ~/.buildozer
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
+      - name: 接受 Android SDK 许可
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+
+      - name: 安装 Android SDK 组件
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
 
       - name: 编译 APK
         run: |
-          ~/.local/bin/buildozer android clean
-          ~/.local/bin/buildozer android debug
-
+          buildozer -v android debug
 
       - name: 保存 APK
         uses: actions/upload-artifact@v4
         with:
-          name: BiliPink-apk
+          name: BiliPink-APK
           path: bin/*.apk
