@@ -1,4 +1,4 @@
-name: Build APK
+name: 构建 APK
 
 on:
   workflow_dispatch:
@@ -11,27 +11,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+      - name: 检出源代码
+        uses: actions/checkout@v4
 
-    - name: 安装环境
-      run: |
-        sudo apt update
-        sudo apt install -y python3-pip git zip unzip openjdk-17-jdk
+      - name: 安装环境
+        run: |
+          sudo apt update
+          sudo apt install -y python3-pip git zip unzip openjdk-17-jdk
 
-    - name: 安装Buildozer
-      run: |
-        pip3 install --user buildozer cython
+      - name: 安装Buildozer
+        run: |
+          pip3 install --user buildozer cython==0.29.36
 
-    - name: 接受Android许可
-      run: |
-        yes | ~/.local/bin/buildozer android update
+      - name: 编译APK
+        run: |
+          ~/.local/bin/buildozer android debug
 
-    - name: 编译APK
-      run: |
-        ~/.local/bin/buildozer android debug
-
-    - name: 保存APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: apk
-        path: bin/*.apk
+      - name: 保存APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: bin/*.apk
