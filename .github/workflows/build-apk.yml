@@ -1,4 +1,8 @@
 name: Build APK
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [ main ]
@@ -12,11 +16,11 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt‑get update
-          sudo apt‑get install‑y git zip unzip openjdk‑17‑jdk autoconf libtool pkg‑config libncurses5‑dev libz‑dev libbz2‑dev liblzma‑dev libsqlite3‑dev libffi‑dev
+          sudo apt‑get install -y git zip unzip openjdk‑17‑jdk autoconf libtool pkg‑config libncurses5‑dev libz‑dev libbz2‑dev liblzma‑dev libsqlite3‑dev libffi‑dev
 
       - name: Install buildozer
         run: |
-          python3 ‑m pip install‑‑upgrade pip buildozer‑‑break‑system‑packages
+          python3 -m pip install --upgrade pip buildozer --break-system-packages
 
       - name: Build APK
         run: buildozer android debug
