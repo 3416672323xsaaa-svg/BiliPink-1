@@ -5,15 +5,20 @@ on:
     branches:
       - main
 
+
 jobs:
+
   build:
 
     runs-on: ubuntu-22.04
 
+
     steps:
+
 
       - name: Checkout
         uses: actions/checkout@v4
+
 
 
       - name: Setup Python
@@ -22,18 +27,26 @@ jobs:
           python-version: "3.10"
 
 
+
       - name: Install Build Tools
         run: |
+
           python -m pip install --upgrade pip
+
           pip install cython==0.29.36
+
           pip install buildozer==1.5.0
+
           pip install python-for-android
+
 
 
       - name: Install Android SDK
         run: |
 
+
           sudo apt update
+
 
           sudo apt install -y \
           git \
@@ -42,30 +55,49 @@ jobs:
           openjdk-17-jdk
 
 
+
           mkdir -p $HOME/android-sdk/cmdline-tools
+
+
 
           wget -q \
           https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+
 
 
           unzip -q commandlinetools-linux-11076708_latest.zip \
           -d $HOME/android-sdk/cmdline-tools
 
 
+
           mkdir -p $HOME/android-sdk/cmdline-tools/latest
+
 
 
           mv $HOME/android-sdk/cmdline-tools/cmdline-tools/* \
           $HOME/android-sdk/cmdline-tools/latest/
 
 
+
+          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+
+
           echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+
+
+          echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
+
 
 
           export ANDROID_HOME=$HOME/android-sdk
 
 
+          export PATH=$PATH:$HOME/android-sdk/cmdline-tools/latest/bin
+
+
+
           yes | sdkmanager --licenses
+
 
 
           sdkmanager \
@@ -75,12 +107,16 @@ jobs:
 
 
 
+
       - name: Build APK
         run: |
 
+
           buildozer android clean
 
+
           buildozer android debug
+
 
 
 
@@ -88,6 +124,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
 
+
           name: BiliPink-APK
+
 
           path: bin/*.apk
