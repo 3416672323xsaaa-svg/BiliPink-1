@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     env:
       ANDROID_HOME: ${{ github.workspace }}/android-sdk
@@ -19,87 +19,119 @@ jobs:
         uses: actions/checkout@v4
 
 
-      - name: Install system dependencies
+      # Java
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+
+      # Python
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+
+      # System tools
+      - name: Install System Tools
         run: |
           sudo apt update
 
           sudo apt install -y \
-            python3-pip \
-            python3-venv \
             git \
-            zip \
             unzip \
-            openjdk-17-jdk \
+            zip \
+            wget \
+            build-essential \
+            libffi-dev \
+            libssl-dev \
             autoconf \
             automake \
             libtool \
-            pkg-config \
-            gettext \
-            cmake \
-            libffi-dev \
-            build-essential
+            pkg-config
 
 
-      - name: Install Python tools
-        run: |
-          python3 -m pip install --upgrade pip
-
-          pip install --upgrade \
-            buildozer \
-            cython==0.29.36 \
-            python-for-android
-
-
+      # Android SDK
       - name: Install Android SDK
         run: |
+
           mkdir -p $ANDROID_HOME/cmdline-tools
 
           wget -q \
           https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip \
-          -O sdk.zip
+          -O tools.zip
 
-          unzip -q sdk.zip -d $ANDROID_HOME/cmdline-tools
 
-          mkdir -p $ANDROID_HOME/cmdline-tools/latest
+          unzip -q tools.zip \
+          -d $ANDROID_HOME/cmdline-tools
+
 
           mv \
-          $ANDROID_HOME/cmdline-tools/cmdline-tools/* \
-          $ANDROID_HOME/cmdline-tools/latest/
+          $ANDROID_HOME/cmdline-tools/cmdline-tools \
+          $ANDROID_HOME/cmdline-tools/latest
+
 
           echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
+
           echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
+
+
+          sdkmanager --version
 
 
           yes | sdkmanager --licenses
 
 
           sdkmanager \
-            "platform-tools" \
-            "platforms;android-35" \
-            "build-tools;35.0.0"
+          "platform-tools" \
+          "platforms;android-35" \
+          "build-tools;35.0.0"
 
 
+
+      # Buildozer
+      - name: Install Buildozer
+        run: |
+
+          python -m pip install --upgrade pip
+
+          pip install \
+          buildozer \
+          cython==0.29.36
+
+
+
+      # Check
       - name: Check Environment
         run: |
+
           java -version
-          python3 --version
+
+          python --version
+
           buildozer --version
-          autoconf --version
+
+          sdkmanager --version
 
 
-      - name: Prepare Build Tools
-        run: |
-          autoreconf --version
-          libtoolize --version
 
-
+      # Build
       - name: Build APK
         run: |
-          buildozer android debug
+
+          yes | buildozer android clean
+
+          yes | buildozer android debug
 
 
+
+      # Upload
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: BiliPink-apk
+
+          name: APK
+
           path: bin/*.apk
