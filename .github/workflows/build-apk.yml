@@ -8,58 +8,66 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     env:
       ANDROID_HOME: ${{ github.workspace }}/android-sdk
-      JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17/x64
+      ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
+
 
     steps:
 
-    - name: 检出代码
+    - name: Checkout
       uses: actions/checkout@v4
 
 
-    - name: 设置 Java 17
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+
+    - name: Setup Java
       uses: actions/setup-java@v4
       with:
         distribution: temurin
         java-version: 17
 
 
-    - name: 设置 Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.11"
-
-
-    - name: 安装 Buildozer
+    - name: Install Build Tools
       run: |
         python -m pip install --upgrade pip
-        pip install buildozer==1.6.0
+        pip install buildozer
         pip install cython==0.29.36
 
 
-    - name: 安装 Android SDK
+    - name: Install Android SDK
+      shell: bash
       run: |
 
         mkdir -p $ANDROID_HOME/cmdline-tools
 
+        cd $ANDROID_HOME/cmdline-tools
+
+
         wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
 
-        unzip commandlinetools-linux-11076708_latest.zip \
-        -d $ANDROID_HOME/cmdline-tools
+
+        unzip commandlinetools-linux-11076708_latest.zip
 
 
-        mkdir -p $ANDROID_HOME/cmdline-tools/latest
+        mkdir latest
 
-        mv $ANDROID_HOME/cmdline-tools/cmdline-tools/* \
-        $ANDROID_HOME/cmdline-tools/latest/
+        mv cmdline-tools/* latest/
+
+
+        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
 
 
         echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
 
-        echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
+
+        sdkmanager --version
 
 
         yes | sdkmanager --licenses
@@ -67,19 +75,23 @@ jobs:
 
         sdkmanager \
         "platform-tools" \
-        "platforms;android-34" \
-        "build-tools;34.0.0"
+        "platforms;android-35" \
+        "build-tools;35.0.0"
 
 
 
-    - name: 检查环境
+    - name: Check Environment
       run: |
+
         java -version
-        sdkmanager --version
+
         python --version
 
+        sdkmanager --version
 
-    - name: 构建 APK
+
+
+    - name: Build APK
       run: |
 
         buildozer android clean
@@ -88,10 +100,10 @@ jobs:
 
 
 
-    - name: 上传 APK
+    - name: Upload APK
       uses: actions/upload-artifact@v4
-
       with:
+
         name: BiliPink-APK
 
         path: bin/*.apk
