@@ -8,11 +8,7 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
-    env:
-      ANDROID_HOME: /usr/local/lib/android/sdk
 
     steps:
 
@@ -23,34 +19,42 @@ jobs:
       - name: 安装环境
         run: |
           sudo apt update
-          sudo apt install -y python3-pip git zip unzip openjdk-17-jdk
+          sudo apt install -y \
+            python3-pip \
+            git \
+            zip \
+            unzip \
+            openjdk-17-jdk
 
 
-      - name: 安装Android工具
+      - name: 安装 Android SDK
         run: |
-          yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager \
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
           "platform-tools" \
           "platforms;android-35" \
           "build-tools;35.0.0"
 
 
-      - name: 安装Buildozer
+      - name: 安装 Buildozer
         run: |
-          pip3 install --user buildozer cython==0.29.36
+          pip3 install --user buildozer
+          pip3 install --user cython==0.29.36
 
 
-      - name: 清理旧缓存
+      - name: 清理缓存
         run: |
           rm -rf ~/.buildozer
 
 
-      - name: 编译APK
+      - name: 编译 APK
         run: |
+          ~/.local/bin/buildozer android clean
           ~/.local/bin/buildozer android debug
 
 
-      - name: 保存APK
+      - name: 保存 APK
         uses: actions/upload-artifact@v4
         with:
           name: BiliPink-apk
