@@ -7,6 +7,7 @@ on:
 
 jobs:
   build:
+
     runs-on: ubuntu-22.04
 
     env:
@@ -19,22 +20,19 @@ jobs:
         uses: actions/checkout@v4
 
 
-      # Java
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: "17"
 
 
-      # Python
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
 
-      # System tools
       - name: Install System Tools
         run: |
           sudo apt update
@@ -53,7 +51,6 @@ jobs:
             pkg-config
 
 
-      # Android SDK
       - name: Install Android SDK
         run: |
 
@@ -64,18 +61,24 @@ jobs:
           -O tools.zip
 
 
-          unzip -q tools.zip \
-          -d $ANDROID_HOME/cmdline-tools
+          unzip -q tools.zip -d temp-tools
 
 
-          mv \
-          $ANDROID_HOME/cmdline-tools/cmdline-tools \
-          $ANDROID_HOME/cmdline-tools/latest
+          mkdir -p $ANDROID_HOME/cmdline-tools/latest
+
+
+          cp -r temp-tools/cmdline-tools/* \
+          $ANDROID_HOME/cmdline-tools/latest/
 
 
           echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
-
           echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
+
+
+          export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+
+
+          ls -la $ANDROID_HOME/cmdline-tools/latest/bin
 
 
           sdkmanager --version
@@ -91,7 +94,6 @@ jobs:
 
 
 
-      # Buildozer
       - name: Install Buildozer
         run: |
 
@@ -103,7 +105,6 @@ jobs:
 
 
 
-      # Check
       - name: Check Environment
         run: |
 
@@ -111,13 +112,12 @@ jobs:
 
           python --version
 
-          buildozer --version
-
           sdkmanager --version
 
+          buildozer --version
 
 
-      # Build
+
       - name: Build APK
         run: |
 
@@ -127,7 +127,6 @@ jobs:
 
 
 
-      # Upload
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
