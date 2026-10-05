@@ -1,29 +1,44 @@
-[app]
-package.name = bilipink
-package.domain = org.bilipink
-title = BiliPink
-package.version = 0.1
+name: 构建 APK
 
-source.dir = .
-source.main = main.py
+on:
+  push:
+    branches:
+      - main
 
-requirements = python3,kivy,yt-dlp==2026.4.12,requests
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: ${{ github.workspace }}/android-sdk
 
-source.include_exts = py,png,jpg,json,txt,html,xml
-source.exclude_exts = spec
-source.exclude_dirs = tests, bin, .github, __pycache__
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
 
-p4a.bootstrap = sdl2
+      - name: 安装依赖
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            python3-pip \
+            build-essential \
+            git \
+            libffi-dev \
+            libssl-dev \
+            libpython3-dev \
+            openjdk-17-jdk \
+            unzip
 
-android.api = 33
-android.ndk = 25b
-android.sdk = 24
+      - name: 安装 Buildozer
+        run: |
+          pip3 install --user --upgrade buildozer cython
 
-android.permissions = INTERNET,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE
-android.orientation = portrait
-android.debug = True
-android.python_optimize = 0
+      - name: 构建APK
+        run: |
+          export PATH=$PATH:$HOME/.local/bin
+          buildozer android debug --ndk=r25b
 
-[buildozer]
-log_level = 2
-warn_on_root = 0
+      - name: 上传APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: BiliPink-APK
+          path: bin/*.apk
