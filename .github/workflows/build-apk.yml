@@ -1,4 +1,4 @@
-name: Build APK
+name: 构建 APK
 
 on:
   push:
@@ -12,58 +12,34 @@ jobs:
       ANDROID_HOME: ${{ github.workspace }}/android-sdk
 
     steps:
-      - name: Checkout source code
+      - name: 检出代码
         uses: actions/checkout@v4
 
-      - name: Install system dependencies
+      - name: 安装依赖
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
+          sudo apt update
+          sudo apt install -y \
+            python3-pip \
+            build-essential \
             git \
-            zip \
-            unzip \
+            libffi-dev \
+            libssl-dev \
+            libpython3-dev \
             openjdk-17-jdk \
-            autoconf \
-            libtool \
-            pkg-config \
-            libncurses5-dev \
-            libz-dev \
-            libbz2-dev \
-            liblzma-dev \
-            libsqlite3-dev \
-            libffi-dev
+            unzip
 
-      - name: Download Android Command‑line Tools
+      - name: 安装 Buildozer
         run: |
-          mkdir -p $ANDROID_HOME/cmdline-tools
-          cd $ANDROID_HOME/cmdline-tools
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-          unzip -q commandlinetools-linux-11076708_latest.zip
-          mv cmdline-tools latest
-          rm -f commandlinetools-linux-11076708_latest.zip
-          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          pip3 install --user --upgrade buildozer cython
 
-      - name: Accept SDK licenses & install components
+      - name: 构建APK
         run: |
-          yes | sdkmanager --licenses
-          yes | sdkmanager --licenses || true
-          sdkmanager \
-            "platform-tools" \
-            "platforms;android-35" \
-            "build-tools;35.0.0" \
-            "build-tools;37.0.0"
+          export PATH=$PATH:$HOME/.local/bin
+          # 强制指定 ndk r25b，避开高版本ndk编译bug
+          buildozer android debug --ndk=r25b
 
-      - name: Install Python build tools
-        run: |
-          python3 -m pip install --upgrade pip
-          pip install buildozer cython
-
-      - name: Build debug APK
-        run: |
-          buildozer android debug
-
-      - name: Upload built APK
+      - name: 上传APK
         uses: actions/upload-artifact@v4
         with:
-          name: apk-file
+          name: BiliPink-APK
           path: bin/*.apk
