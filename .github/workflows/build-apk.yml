@@ -19,7 +19,6 @@ jobs:
         uses: actions/checkout@v4
 
 
-      # 固定 Python 3.10（修复 python-for-android 编译错误）
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -81,8 +80,7 @@ jobs:
 
       - name: Build APK
         run: |
-          yes | buildozer android clean
-          yes | buildozer android debug
+          buildozer android debug
 
 
       - name: Upload APK
