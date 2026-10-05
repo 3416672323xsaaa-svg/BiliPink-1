@@ -1,4 +1,4 @@
-name: 构建 APK
+name: Build APK
 
 on:
   workflow_dispatch:
@@ -10,25 +10,42 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+
     steps:
+
       - name: 检出源代码
         uses: actions/checkout@v4
+
 
       - name: 安装环境
         run: |
           sudo apt update
           sudo apt install -y python3-pip git zip unzip openjdk-17-jdk
 
-      - name: 安装Buildozer
+
+      - name: 接受 Android 协议并安装工具
+        run: |
+          yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager \
+          "platform-tools" \
+          "platforms;android-35" \
+          "build-tools;35.0.0"
+
+
+      - name: 安装 Buildozer
         run: |
           pip3 install --user buildozer cython==0.29.36
 
-      - name: 编译APK
+
+      - name: 编译 APK
         run: |
           ~/.local/bin/buildozer android debug
 
-      - name: 保存APK
+
+      - name: 保存 APK
         uses: actions/upload-artifact@v4
         with:
-          name: apk
+          name: BiliPink-apk
           path: bin/*.apk
