@@ -7,59 +7,109 @@ on:
 
 jobs:
   build:
+
     runs-on: ubuntu-22.04
 
     env:
       ANDROID_HOME: ${{ github.workspace }}/android-sdk
+      ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
+
 
     steps:
 
+    # 拉取代码
     - name: Checkout
       uses: actions/checkout@v4
 
 
+    # Python
     - name: Setup Python
       uses: actions/setup-python@v5
       with:
         python-version: "3.11"
 
 
+    # Java + 基础工具
+    - name: Install System Tools
+      run: |
+
+        sudo apt update
+
+        sudo apt install -y \
+        openjdk-17-jdk \
+        unzip \
+        wget \
+        zip \
+        git
+
+
+        java -version
+
+
+
+    # Python依赖
     - name: Install Buildozer
       run: |
+
         python -m pip install --upgrade pip
-        pip install buildozer cython==0.29.36
+
+        pip install \
+        buildozer \
+        cython==0.29.36
 
 
-    - name: Install Java
-      run: |
-        sudo apt update
-        sudo apt install -y openjdk-17-jdk unzip wget
 
-
+    # Android SDK
     - name: Install Android SDK
+      shell: bash
       run: |
 
         mkdir -p $ANDROID_HOME/cmdline-tools
 
+
         cd /tmp
 
-        wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+
+        wget -q \
+        https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+
 
         unzip -q commandlinetools-linux-11076708_latest.zip
 
+
+
         mkdir -p $ANDROID_HOME/cmdline-tools/latest
 
-        mv cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/
 
 
-        echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+        cp -r cmdline-tools/* \
+        $ANDROID_HOME/cmdline-tools/latest/
+
+
 
         echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
 
         echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
 
 
+
+        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+
+
+
+        chmod +x \
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager
+
+
+
+        echo "检测 sdkmanager"
+
+        sdkmanager --version
+
+
+
         yes | sdkmanager --licenses
+
 
 
         sdkmanager \
@@ -69,17 +119,25 @@ jobs:
 
 
 
+    # 构建APK
     - name: Build APK
       run: |
 
+
+        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+
+
         buildozer android clean
+
 
         buildozer android debug
 
 
 
+    # 保存APK
     - name: Upload APK
       uses: actions/upload-artifact@v4
+
       with:
 
         name: BiliPink-APK
