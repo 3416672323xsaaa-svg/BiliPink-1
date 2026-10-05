@@ -1,4 +1,4 @@
-[app]
+6[app]
 title = BiliPink
 
 package.name = bilipink
@@ -9,7 +9,7 @@ source.main = main.py
 
 requirements = python3,kivy,requests
 
-android.api = 35
+android.api = 34
 android.minapi = 24
 android.build_tools_version = 35.0.0
 
