@@ -12,10 +12,10 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
 
-      - name: 生成buildozer.spec
+      - name: 用Python生成buildozer.spec
         run: |
-          cat > buildozer.spec <<'EOF'
-[app]
+          python3 << 'PYEOF'
+content = '''[app]
 package.name = bilipink
 package.domain = org.bilipink
 title = BiliPink
@@ -41,7 +41,10 @@ android.debug = True
 [buildozer]
 log_level = 2
 warn_on_root = 0
-EOF
+'''
+with open("buildozer.spec","w",encoding="utf8") as f:
+    f.write(content)
+PYEOF
           cat buildozer.spec
 
       - name: 安装系统依赖
