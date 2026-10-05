@@ -14,30 +14,25 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
 
-
       - name: 安装环境
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
+          sudo apt update
+          sudo apt install -y \
             python3 \
             python3-pip \
-            python3-venv \
             git \
             zip \
             unzip \
             openjdk-17-jdk
 
-
       - name: 安装 Buildozer
         run: |
-          python3 -m pip install --user --upgrade pip
-          python3 -m pip install --user buildozer cython==0.29.37
+          pip3 install --user buildozer
+          pip3 install --user cython==0.29.37
 
-
-      - name: 添加 PATH
+      - name: 设置路径
         run: |
           echo "$HOME/.local/bin" >> $GITHUB_PATH
-
 
       - name: 安装 Android SDK
         run: |
@@ -46,20 +41,19 @@ jobs:
           $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
           "platform-tools" \
           "platforms;android-35" \
-          "build-tools;35.0.0" \
-          "build-tools;34.0.0"
+          "build-tools;35.0.0"
 
-
-      - name: 修复 AIDL
+      - name: 检查 AIDL
         run: |
-          sudo ln -sf $ANDROID_HOME/build-tools/35.0.0/aidl /usr/bin/aidl
-          aidl --version || true
-
+          find $ANDROID_HOME -name aidl
+          echo "ANDROIDSDK=$ANDROID_HOME"
 
       - name: 编译 APK
+        env:
+          ANDROIDSDK: ${{ env.ANDROID_HOME }}
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
         run: |
           buildozer -v android debug
-
 
       - name: 保存 APK
         uses: actions/upload-artifact@v4
