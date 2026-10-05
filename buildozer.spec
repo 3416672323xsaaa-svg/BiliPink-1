@@ -1,5 +1,6 @@
 [app]
 title = BiliPink
+version = 1.0
 
 package.name = bilipink
 package.domain = org.bilipink
