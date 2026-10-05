@@ -10,10 +10,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout source code
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -31,22 +31,30 @@ jobs:
             libsqlite3-dev \
             libffi-dev
 
-      - name: Setup Android SDK
+      - name: Setup Android SDK & accept all licenses
         run: |
           echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
           echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
+
+          yes | sdkmanager --licenses
           yes | sdkmanager --licenses || true
 
-      - name: Install Buildozer
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "build-tools;37.0.0"
+
+      - name: Install Python build tools
         run: |
           python3 -m pip install --upgrade pip
           pip install buildozer cython
 
-      - name: Build APK
+      - name: Build debug APK
         run: |
           buildozer android debug
 
-      - name: Upload APK
+      - name: Upload built APK
         uses: actions/upload-artifact@v4
         with:
           name: apk-file
