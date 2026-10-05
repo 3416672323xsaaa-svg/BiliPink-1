@@ -1,6 +1,7 @@
 [app]
 
 title = BiliPink
+
 package.name = bilipink
 package.domain = org.bilipink
 
@@ -14,9 +15,10 @@ requirements = python3,kivy,requests
 source.include_exts = py,png,jpg,json,html,txt
 source.exclude_dirs = tests,bin,.github,__pycache__
 
-android.api = 33
+android.api = 35
+android.sdk = 35
 android.ndk = 25b
-android.sdk = 33
+android.build_tools_version = 35.0.0
 
 android.permissions = INTERNET,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE
 
