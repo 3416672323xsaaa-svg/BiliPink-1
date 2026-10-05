@@ -12,79 +12,49 @@ jobs:
 
     env:
       ANDROID_HOME: ${{ github.workspace }}/android-sdk
-      ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
-
+      JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17/x64
 
     steps:
 
-    # 拉取代码
-    - name: Checkout
+    - name: 检出代码
       uses: actions/checkout@v4
 
 
-    # Python
-    - name: Setup Python
+    - name: 设置 Java 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: 17
+
+
+    - name: 设置 Python
       uses: actions/setup-python@v5
       with:
         python-version: "3.11"
 
 
-    # Java + 基础工具
-    - name: Install System Tools
+    - name: 安装 Buildozer
       run: |
-
-        sudo apt update
-
-        sudo apt install -y \
-        openjdk-17-jdk \
-        unzip \
-        wget \
-        zip \
-        git
-
-
-        java -version
-
-
-
-    # Python依赖
-    - name: Install Buildozer
-      run: |
-
         python -m pip install --upgrade pip
-
-        pip install \
-        buildozer \
-        cython==0.29.36
+        pip install buildozer==1.6.0
+        pip install cython==0.29.36
 
 
-
-    # Android SDK
-    - name: Install Android SDK
-      shell: bash
+    - name: 安装 Android SDK
       run: |
 
         mkdir -p $ANDROID_HOME/cmdline-tools
 
+        wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
 
-        cd /tmp
-
-
-        wget -q \
-        https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-
-
-        unzip -q commandlinetools-linux-11076708_latest.zip
-
+        unzip commandlinetools-linux-11076708_latest.zip \
+        -d $ANDROID_HOME/cmdline-tools
 
 
         mkdir -p $ANDROID_HOME/cmdline-tools/latest
 
-
-
-        cp -r cmdline-tools/* \
+        mv $ANDROID_HOME/cmdline-tools/cmdline-tools/* \
         $ANDROID_HOME/cmdline-tools/latest/
-
 
 
         echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
@@ -92,54 +62,36 @@ jobs:
         echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
 
 
-
-        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
-
-
-
-        chmod +x \
-        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager
-
-
-
-        echo "检测 sdkmanager"
-
-        sdkmanager --version
-
-
-
         yes | sdkmanager --licenses
-
 
 
         sdkmanager \
         "platform-tools" \
-        "platforms;android-35" \
-        "build-tools;35.0.0"
+        "platforms;android-34" \
+        "build-tools;34.0.0"
 
 
 
-    # 构建APK
-    - name: Build APK
+    - name: 检查环境
+      run: |
+        java -version
+        sdkmanager --version
+        python --version
+
+
+    - name: 构建 APK
       run: |
 
-
-        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
-
-
         buildozer android clean
-
 
         buildozer android debug
 
 
 
-    # 保存APK
-    - name: Upload APK
+    - name: 上传 APK
       uses: actions/upload-artifact@v4
 
       with:
-
         name: BiliPink-APK
 
         path: bin/*.apk
