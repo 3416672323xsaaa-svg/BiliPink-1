@@ -40,12 +40,6 @@ jobs:
           buildozer --version
 
 
-      - name: Prepare buildozer
-        run: |
-          export PATH=$PATH:$HOME/.local/bin
-          buildozer android list_targets
-
-
       - name: Build APK
         run: |
           export PATH=$PATH:$HOME/.local/bin
