@@ -71,7 +71,7 @@ jobs:
 
 
     # ==========================
-    # Linux依赖
+    # Linux依赖（新增cairo系统库）
     # ==========================
 
     - name: Install dependencies
@@ -96,7 +96,9 @@ jobs:
           cmake \
           libffi-dev \
           libssl-dev \
-          libltdl-dev
+          libltdl-dev \
+          libcairo2-dev \
+          libgirepository1.0-dev
 
 
 
