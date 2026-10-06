@@ -39,7 +39,7 @@ jobs:
       - name: Install python packages
         run: |
           python3 -m pip install --upgrade pip
-          pip3 install --break-system-packages buildozer cython==0.29.33 kivy kivymd python-for-android || true
+          pip3 install --break-system-packages buildozer cython==0.29.33 kivy kivymd python-for-android
 
       - name: Generate release keystore
         id: genkey
@@ -62,7 +62,9 @@ jobs:
           export P4A_RELEASE_KEYSTORE_PASSWD="android"
           export P4A_RELEASE_KEYALIAS_PASSWD="android"
           buildozer -v android release 2>&1 | tee build.log
-          find . -name "*.apk" -exec cp {} ./output-release.apk \; 2>/dev/null || true
+          ls -la
+          find . -name "*.apk"
+          find . -name "*.apk" -exec cp {} ./output-release.apk \;
 
       - name: Detect build result
         id: detect
