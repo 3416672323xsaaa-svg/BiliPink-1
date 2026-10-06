@@ -1,91 +1,54 @@
-name: Build Kivy Android APK (Produce downloadable apk)
+name: Build Kivy Android APK FinalTry
 on:
   workflow_dispatch:
   push:
     branches: [ main ]
 
-permissions:
-  contents: write
-  actions: read
-  checks: read
-
 env:
-  ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
-  ANDROID_HOME: ${{ github.workspace }}/android-sdk
-  JAVA_HOME: /usr/lib/jvm/temurin-17-jdk-amd64
-  CYTHON_LANGUAGE_LEVEL: "3"
-  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.java.home=$JAVA_HOME -Dorg.gradle.jvmargs=-Xmx2048m"
-  NPROC_MAX: "1"
+  JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+  ANDROID_SDK_ROOT: $GITHUB_WORKSPACE/android-sdk
+  ANDROID_HOME: $GITHUB_WORKSPACE/android-sdk
 
 jobs:
-  build-android:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu‑latest
     steps:
-      - name: Checkout project source code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Cache buildozer build files
-        uses: actions/cache@v3
-        with:
-          path: .buildozer
-          key: bz-kivy-v2
-
-      - name: Setup Java 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      - name: Setup Python 3.9
+      - name: Setup Python3.9
         uses: actions/setup-python@v5
         with:
           python-version: '3.9'
 
-      - name: Install system dependencies
+      - name: Install system libs
         run: |
-          sudo apt-get update
-          sudo apt-get install -y git zip unzip python3-pip autoconf automake libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev cmake libffi-dev libssl-dev curl libcairo2-dev wget unzip
+          sudo apt‑get update
+          sudo apt‑get install ‑y git zip unzip wget autoconf libtool pkg‑config cmake libffi‑dev libssl‑dev curl
 
-      - name: Download Android SDK command‑line‑tools
+      - name: Pre‑fetch offline Android SDK bundle
         run: |
-          mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline.zip
-          unzip -q cmdline.zip -d $ANDROID_SDK_ROOT/cmdline-tools
-          mv $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools $ANDROID_SDK_ROOT/cmdline-tools/latest
-          rm cmdline.zip
-          echo "y" | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT "build-tools;37.0.0" "platforms;android33"
+          mkdir -p $ANDROID_SDK_ROOT
+          wget -q https://github.com/lzhiyong/android-sdk-bundle/releases/download/sdk37/android-sdk‑bundle‑37.tar.xz -O sdk.tar.xz
+          tar -xf sdk.tar.xz -C $ANDROID_SDK_ROOT
+          rm -f sdk.tar.xz
+          ls -la $ANDROID_SDK_ROOT
 
-      - name: Install Buildozer & Kivy packages
+      - name: Install buildozer & dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install buildozer cython==0.29.33 kivy kivymd python-for-android
+          pip install buildozer cython==0.29.33 kivy kivymd python‑for‑android
 
-      - name: Compile APK with Buildozer
+      - name: Build debug APK
         run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          java -version
-          python --version
-          buildozer --version
-          export BUILDOZER_ALLOW_PLATFORM_EXEC=1
-          export USE_COLORS=0
-          buildozer android debug 2>&1 | tee buildozer.log
-          mkdir -p ./output_apk
-          find .buildozer/android/platform/android/app/build/outputs/apk -name "*.apk" -exec cp {} ./output_apk/ \;
+          buildozer android debug
 
-      - name: Verify APK generated
-        id: check_apk
+      - name: Prepare output folder
         run: |
-          if [ -n "$(ls ./output_apk/*.apk 2>/dev/null)" ]; then
-            echo "BUILD_OK=true" >> $GITHUB_OUTPUT
-            ls ./output_apk/
-          else
-            echo "No APK generated!"
-            exit 1
-          fi
+          mkdir -p ./out_apk
+          find ./.buildozer/android/platform/android/app/build/outputs/apk -name "*.apk" -exec cp {} ./out_apk/ \;
 
-      - name: Upload built APK artifact
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
-        if: steps.check_apk.outputs.BUILD_OK == 'true'
         with:
-          name: BiliPink-APK
-          path: ./output_apk/*.apk
+          name: Final‑APK‑Build
+          path: ./out_apk/*.apk
