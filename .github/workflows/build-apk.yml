@@ -46,11 +46,18 @@ jobs:
           buildozer -v android debug 2>&1 | tee build.log
 
 
+      - name: Find APK
+        run: |
+          echo "Searching APK..."
+          find . -name "*.apk"
+
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: apk
-          path: bin/*.apk
+          path: |
+            **/*.apk
 
 
       - name: Upload build log
