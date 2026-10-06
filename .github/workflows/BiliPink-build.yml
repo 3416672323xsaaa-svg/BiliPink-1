@@ -45,7 +45,8 @@ jobs:
             python3-pip autoconf automake libtool \
             pkg-config zlib1g-dev libncurses5-dev \
             libncursesw5-dev cmake libffi-dev libssl-dev \
-            curl unzip openjdk-17-jdk libltdl-dev
+            curl unzip openjdk-17-jdk libltdl-dev \
+            libcairo2-dev
 
     - name: Install Buildozer and dependencies
       run: |
