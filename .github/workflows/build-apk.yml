@@ -9,72 +9,96 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+
     steps:
+
+      # 拉取代码
       - name: Checkout
         uses: actions/checkout@v4
 
 
-      - name: Install system dependencies
+      # 安装基础环境
+      - name: Install Linux dependencies
         run: |
           sudo apt update
+
           sudo apt install -y \
+            python3 \
             python3-pip \
             python3-setuptools \
             python3-wheel \
             git \
             zip \
             unzip \
-            openjdk-17-jdk
+            openjdk-17-jdk \
+            autoconf \
+            automake \
+            libtool \
+            pkg-config \
+            zlib1g-dev \
+            libncurses5-dev \
+            libncursesw5-dev \
+            libtinfo5 \
+            cmake
 
 
-      - name: Install Buildozer
+      # Python 编译环境
+      - name: Install Python packages
         run: |
-          pip3 install --upgrade pip
-          pip3 install buildozer cython
+          python3 -m pip install --upgrade pip
+
+          pip3 install \
+            buildozer \
+            cython==0.29.36 \
+            virtualenv
 
 
-      - name: Accept Android SDK licenses
+      # 安装 Android SDK 全套
+      - name: Setup Android SDK
         run: |
-          yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+          yes | sdkmanager --licenses || true
+
+          sdkmanager \
+          "platform-tools" \
+          "cmdline-tools;latest" \
+          "platforms;android-35" \
+          "platforms;android-36" \
+          "build-tools;35.0.0" \
+          "build-tools;36.0.0" \
+          "build-tools;37.0.0" \
+          "extras;google;m2repository" \
+          "extras;android;m2repository"
 
 
+      # 编译 APK
       - name: Build APK
         run: |
+
+          buildozer android clean
+
           buildozer android debug
 
 
+      # 查找 APK
       - name: Find APK
         run: |
-          echo "Searching APK..."
           find . -name "*.apk"
 
 
-      - name: Prepare APK
-        run: |
-          mkdir -p output
-          APK=$(find . -name "*.apk" | head -n 1)
-
-          if [ -z "$APK" ]; then
-            echo "APK not found!"
-            exit 1
-          fi
-
-          echo "Found APK:"
-          echo $APK
-
-          cp "$APK" output/BiliPink.apk
-
-          ls -lh output
-
-
+      # 保存 APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: BiliPink-APK
-          path: output/BiliPink.apk
+          path: |
+            bin/*.apk
 
 
-      - name: Upload build log
+      # 保存日志
+      - name: Upload Build Log
         if: always()
         uses: actions/upload-artifact@v4
         with:
