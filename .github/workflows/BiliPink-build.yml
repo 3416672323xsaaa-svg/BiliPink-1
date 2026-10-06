@@ -5,24 +5,43 @@ on:
 
 permissions:
   contents: write
+  actions: read
+
 
 jobs:
-  build:
+  build-apk:
+
     runs-on: ubuntu-latest
+
 
     env:
       ANDROID_HOME: /usr/local/lib/android/sdk
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
       JAVA_HOME: /usr/lib/jvm/temurin-17-jdk-amd64
 
+
     steps:
 
+
+    # 获取代码
     - name: Checkout
       uses: actions/checkout@v4
 
 
+
+    # 修复 Git 网络
+    - name: Setup Git
+      run: |
+        git config --global url."https://github.com/".insteadOf git://github.com/
+        git config --global http.postBuffer 524288000
+        git config --global http.maxRequestBuffer 100M
+
+
+
+    # 安装环境
     - name: Install dependencies
       run: |
+
         sudo apt update
 
         sudo apt install -y \
@@ -37,41 +56,78 @@ jobs:
           zlib1g-dev \
           libncurses5-dev \
           libncursesw5-dev \
-          cmake
+          cmake \
+          libffi-dev
 
 
-    - name: Setup Python
+
+    # Python环境
+    - name: Install Python packages
       run: |
+
         python3 -m pip install --upgrade pip
+
         pip install \
           buildozer \
           cython==0.29.36
 
 
+
+    # 缓存
     - name: Cache Buildozer
       uses: actions/cache@v4
       with:
+
         path: |
           ~/.buildozer
           .buildozer
-        key: buildozer-cache-v1
+
+        key: buildozer-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
+
+        restore-keys: |
+          buildozer-${{ runner.os }}-
 
 
-    - name: Build APK
-      timeout-minutes: 60
+
+    # 手动下载 p4a
+    - name: Download python-for-android
       run: |
-
-        export PATH=$PATH:$HOME/.local/bin
 
         mkdir -p ~/.buildozer
 
+        if [ ! -d ~/.buildozer/p4a ]; then
+
+          git clone \
+          --depth=1 \
+          https://github.com/kivy/python-for-android.git \
+          ~/.buildozer/p4a
+
+        fi
+
+
+
+    # 构建APK
+    - name: Build APK
+      timeout-minutes: 120
+      run: |
+
+
+        export PATH=$PATH:$HOME/.local/bin
+
+
         buildozer android clean || true
+
 
         buildozer -v android debug
 
 
+
+    # 上传APK
     - name: Upload APK
       uses: actions/upload-artifact@v4
+
       with:
-        name: kivy-apk
+
+        name: Kivy-debug-apk
+
         path: bin/*.apk
