@@ -26,7 +26,7 @@ log_level = 2
 
 [android]
 
-android.api = 35
+android.api = 33
 
 android.minapi = 23
 
