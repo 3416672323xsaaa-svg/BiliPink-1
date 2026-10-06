@@ -4,7 +4,6 @@ title = MyKivyApp
 package.name = mykivyapp
 package.domain = org.mykivyapp
 
-# 这里补上版本号！！漏掉就直接报错
 version = 1.0
 
 source.dir = .
@@ -13,7 +12,7 @@ source.include_exts = py,png,jpg,kv,atlas
 requirements = python3,kivy,kivymd
 
 p4a.fork = kivy
-p4a.branch = release-2024.04
+p4a.branch = master
 
 android.archs = arm64-v8a
 android.api = 33
