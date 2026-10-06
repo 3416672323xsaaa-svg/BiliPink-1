@@ -5,11 +5,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
-
 permissions:
   contents: write
   actions: read
-
 
 env:
   ANDROID_HOME: /usr/local/lib/android/sdk
@@ -17,8 +15,8 @@ env:
   JAVA_HOME: /usr/lib/jvm/temurin-17-jdk-amd64
   GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx2048m"
   CYTHON_LANGUAGE_LEVEL: "3"
-  PIP_INDEX_URL: https://pypi.tuna.tsinghua.edu.cn/simple
-
+  # 改动1：切回官方源，避免镜像源 404
+  PIP_INDEX_URL: https://pypi.org/simple
 
 jobs:
   build-android:
@@ -70,40 +68,39 @@ jobs:
           libssl-dev \
           libltdl-dev \
           libcairo2-dev \
-          libgirepository1.0-dev
+          libgirepository1.0-dev \
+          openjdk-17-jdk \
+          autoconf-archive
 
     # ==========================
     # Android SDK
+    # 改动2：去掉 || true，让失败立刻暴露，并打印已安装组件
     # ==========================
     - name: Install Android SDK
       run: |
-        SDKMANAGER=$(find "$ANDROID_SDK_ROOT" -name sdkmanager | head -1)
+        SDKMANAGER=$(find "$ANDROID_SDK_ROOT" -name sdkmanager 2>/dev/null | head -1)
         if [ -z "$SDKMANAGER" ]; then
-          echo "sdkmanager not found"
+          echo "sdkmanager not found under $ANDROID_SDK_ROOT"
+          ls -la "$ANDROID_SDK_ROOT" || true
           exit 1
         fi
-        echo "Using SDK Manager:"
-        echo "$SDKMANAGER"
-        yes | "$SDKMANAGER" --licenses || true
-        "$SDKMANAGER" \
-          "platform-tools" \
-          "platforms;android-35" \
-          "build-tools;35.0.0" \
-          "ndk;25.2.9519653" || true
+        echo "Using SDK Manager: $SDKMANAGER"
+        yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+        "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;25.2.9519653"
+        echo "--- installed packages ---"
+        "$SDKMANAGER" --list_installed || true
 
     # ==========================
-    # 安装Buildozer（增加重试）
+    # 安装Buildozer
+    # 改动3：分开安装，便于定位是哪个包出问题
     # ==========================
     - name: Install Buildozer
       run: |
         python -m pip install --upgrade pip setuptools wheel --retries 10
-        pip install \
-          buildozer \
-          cython==0.29.36 \
-          python-for-android \
-          kivy \
-          kivymd \
-          --retries 10
+        pip install --retries 10 buildozer
+        pip install --retries 10 "cython==0.29.36"
+        pip install --retries 10 python-for-android
+        pip install --retries 10 kivy kivymd
 
     # ==========================
     # 检查环境
@@ -113,6 +110,7 @@ jobs:
         export PATH="$HOME/.local/bin:$PATH"
         java -version
         python --version
+        pip list | grep -iE "buildozer|cython|python-for-android|kivy"
         buildozer --version
 
     # ==========================
@@ -152,12 +150,16 @@ jobs:
           echo "buildozer.spec missing"
           exit 1
         fi
+        echo "--- buildozer.spec 关键配置 ---"
+        grep -E "^(title|package.name|package.domain|requirements|android.api|android.minapi|android.ndk)" buildozer.spec || true
 
     # ==========================
     # 构建APK
+    # 改动4：加 set -o pipefail，避免 tee 吞掉真实退出码
     # ==========================
     - name: Build APK
       run: |
+        set -o pipefail
         export PATH="$HOME/.local/bin:$PATH"
         export BUILDOZER_ALLOW_PLATFORM_EXEC=1
         export P4A_RELEASE_KEYSTORE="$PWD/release.keystore"
@@ -165,6 +167,19 @@ jobs:
         export P4A_RELEASE_KEYSTORE_PASSWD="android"
         export P4A_RELEASE_KEYALIAS_PASSWD="android"
         buildozer -v android release 2>&1 | tee buildozer.log
+
+    # ==========================
+    # 失败时输出错误摘要（方便直接在 Actions 页面看）
+    # ==========================
+    - name: Show error summary
+      if: failure()
+      run: |
+        if [ -f buildozer.log ]; then
+          echo "===== 第一个错误附近的内容 ====="
+          grep -n -iE "error|failed|exception|404" buildozer.log | head -40
+        else
+          echo "buildozer.log 不存在"
+        fi
 
     # ==========================
     # 收集APK
