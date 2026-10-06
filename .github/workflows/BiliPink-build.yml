@@ -1,40 +1,37 @@
-name: Build APK Fast
+name: BuildAPK
 on:
   push:
     branches: [ main ]
-
 jobs:
   build:
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Cache buildozer compiled components
+      - name: Cache
         uses: actions/cache@v3
         with:
-          path: |
-            .buildozer
-          key: buildozer-cache-v1-${{ github.run_id }}
+          path: .buildozer
+          key: bz-cache-v1
 
-      - name: Install system libs
+      - name: Install system packages
         run: |
-          sudo apt-get update
-          sudo apt-get install -y python3-pip python3-venv openjdk-17-jdk unzip git
+          sudo apt update
+          sudo apt install -y python3-pip python3-venv openjdk-17-jdk unzip git
 
-      - name: Setup Java 17
+      - name: Set Java
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Prepare Python venv
+      - name: Prepare venv
         run: |
           python3 -m venv venv
           source venv/bin/activate
-          pip install --no-cache-dir cython==3.0.12 buildozer==1.5.0 pyjnius==1.6.1
+          pip install cython==3.0.12 buildozer==1.5.0 pyjnius==1.6.1
 
-      - name: Generate clean spec
+      - name: Generate buildozer.spec
         run: |
           source venv/bin/activate
           rm -f buildozer.spec
@@ -42,13 +39,11 @@ jobs:
           sed -i 's/^#android.arch =.*/android.arch = arm64‑v8a/' buildozer.spec
           sed -i 's/^android.permissions.*/android.permissions = INTERNET/' buildozer.spec
           echo "python.package.pyjnius = pyjnius==1.6.1" >> buildozer.spec
-          # 关闭多余多媒体组件，减少编译量
           echo "android.ndk.api = 21" >> buildozer.spec
           echo "android.enable_android_openssl = False" >> buildozer.spec
 
-      - name: Compile APK
+      - name: Build APK
         env:
-          APP_ANDROID_BUILD_TOOLS_VERSION: "34.0.0"
           ANDROID_HOME: ${{ github.workspace }}/.buildozer/android/platform/android-sdk
           ANDROID_SDK_ROOT: ${{ github.workspace }}/.buildozer/android/platform/android-sdk
           NPROC_MAX: "2"
@@ -56,8 +51,8 @@ jobs:
           source venv/bin/activate
           yes | buildozer android debug
 
-      - name: Upload generated APK
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: myapp-apk
+          name: apk-file
           path: ./bin/*.apk
