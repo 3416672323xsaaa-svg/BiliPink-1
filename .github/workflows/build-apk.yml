@@ -5,15 +5,24 @@ on:
     branches:
       - main
 
+
 jobs:
+
   build:
 
     runs-on: ubuntu-latest
 
+
+    env:
+      ANDROID_HOME: ${{ github.workspace }}/android-sdk
+
+
     steps:
+
 
     - name: Checkout
       uses: actions/checkout@v4
+
 
 
     - name: Setup Java 17
@@ -23,50 +32,55 @@ jobs:
         java-version: 17
 
 
+
     - name: Setup Python
       uses: actions/setup-python@v5
       with:
         python-version: "3.11"
 
 
-    - name: Install Buildozer
+
+    - name: Install tools
       run: |
         sudo apt update
-        sudo apt install -y unzip zip wget
+        sudo apt install -y wget unzip zip git
+
         pip install --upgrade pip
         pip install buildozer cython
 
 
-    - name: Setup Android SDK
+
+    - name: Install Android SDK
+      shell: bash
       run: |
 
-        mkdir -p $HOME/android-sdk
+        mkdir -p $ANDROID_HOME/cmdline-tools
 
-        cd $HOME/android-sdk
+
+        cd /tmp
+
 
         wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+
 
         unzip commandlinetools-linux-11076708_latest.zip
 
 
-        mkdir -p cmdline-tools/latest
+        mv cmdline-tools $ANDROID_HOME/cmdline-tools/latest
 
 
-        mv cmdline-tools/bin cmdline-tools/latest/
-        mv cmdline-tools/lib cmdline-tools/latest/
-        mv cmdline-tools/NOTICE.txt cmdline-tools/latest/ || true
-        mv cmdline-tools/source.properties cmdline-tools/latest/ || true
+
+        echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
+
+        echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
 
 
-        echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
 
-        echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
-
-
-        yes | sdkmanager --licenses
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
 
 
-        sdkmanager \
+
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
         "platform-tools" \
         "platforms;android-34" \
         "build-tools;34.0.0"
@@ -75,11 +89,22 @@ jobs:
 
     - name: Build APK
       run: |
+
         buildozer android debug
+
+
+
+    - name: Find APK
+      run: |
+
+        find . -name "*.apk"
+
 
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: apk
-        path: bin/*.apk
+
+        name: BiliPink-APK
+
+        path: "**/*.apk"
