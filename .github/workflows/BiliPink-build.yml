@@ -10,8 +10,8 @@ permissions:
   checks: read
 
 env:
-  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-  ANDROID_HOME: /usr/local/lib/android/sdk
+  ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
+  ANDROID_HOME: ${{ github.workspace }}/android-sdk
   JAVA_HOME: /usr/lib/jvm/temurin-17-jdk-amd64
   CYTHON_LANGUAGE_LEVEL: "3"
   GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.java.home=$JAVA_HOME -Dorg.gradle.jvmargs=-Xmx2048m"
@@ -28,7 +28,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: .buildozer
-          key: bz-kivy-v1
+          key: bz-kivy-v2
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
@@ -44,11 +44,16 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y git zip unzip python3-pip autoconf automake libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev cmake libffi-dev libssl-dev curl libcairo2-dev
+          sudo apt-get install -y git zip unzip python3-pip autoconf automake libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev cmake libffi-dev libssl-dev curl libcairo2-dev wget unzip
 
-      - name: Accept all Android SDK licenses automatically
+      - name: Download Android SDK command‑line‑tools
         run: |
-          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses
+          mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline.zip
+          unzip -q cmdline.zip -d $ANDROID_SDK_ROOT/cmdline-tools
+          mv $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools $ANDROID_SDK_ROOT/cmdline-tools/latest
+          rm cmdline.zip
+          echo "y" | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT "build-tools;37.0.0" "platforms;android33"
 
       - name: Install Buildozer & Kivy packages
         run: |
