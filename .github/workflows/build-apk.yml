@@ -15,44 +15,36 @@ jobs:
     timeout-minutes: 120
 
 
-    env:
-      ANDROID_HOME: ${{ github.workspace }}/android-sdk
-      ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
-
-
     steps:
-
 
     - name: Checkout
       uses: actions/checkout@v4
 
 
 
-    - name: Install system packages
+    - name: Setup Java 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: 17
+
+
+
+    - name: Install dependencies
       run: |
 
         sudo apt update
 
         sudo apt install -y \
-          python3 \
           python3-pip \
-          unzip \
-          wget \
           git \
-          openjdk-17-jdk \
+          unzip \
           autoconf \
           automake \
           libtool \
           pkg-config \
           zlib1g-dev
 
-
-        echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
-
-
-
-    - name: Install Buildozer
-      run: |
 
         python3 -m pip install --upgrade pip
 
@@ -62,67 +54,22 @@ jobs:
 
 
 
-    - name: Install Android SDK
-      run: |
-
-        mkdir -p $ANDROID_HOME/cmdline-tools/latest
-
-
-        cd /tmp
-
-
-        wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-
-
-        unzip -q commandlinetools-linux-11076708_latest.zip
-
-
-        mv cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/
-
-
-        echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
-
-
-        export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-
-        export PATH=$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
-
-
-        yes | sdkmanager --licenses
-
-
-        sdkmanager \
-          "platform-tools" \
-          "platforms;android-35" \
-          "build-tools;35.0.0"
-
-
-
-    - name: Prepare Buildozer
+    - name: Clean old cache
       run: |
 
         rm -rf ~/.buildozer
-
-        rm -rf .buildozer
-
-
-        buildozer --version
 
 
 
     - name: Build APK
       run: |
 
-        export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-
-
-        buildozer -v android debug
+        yes | buildozer android debug
 
 
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
-
 
       with:
 
