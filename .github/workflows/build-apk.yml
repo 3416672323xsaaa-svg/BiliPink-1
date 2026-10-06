@@ -50,25 +50,30 @@ jobs:
       - name: Find APK
         run: |
           echo "Searching APK..."
-          find . -type f -name "*.apk" -print
+          find . -type f -name "*.apk" -print || true
 
 
       - name: Prepare APK
         run: |
           mkdir -p output
-          
+
+          echo "Searching APK locations..."
+
           APK=$(find . -type f -name "*.apk" | head -n 1)
-          
+
           if [ -z "$APK" ]; then
             echo "APK not found!"
+            echo "===== Current files ====="
+            ls -R
             exit 1
           fi
-          
+
           echo "Found APK:"
           echo "$APK"
-          
+
           cp "$APK" output/BiliPink.apk
-          
+
+          echo "Output:"
           ls -lh output/
 
 
