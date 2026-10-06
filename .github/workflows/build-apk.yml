@@ -34,15 +34,13 @@ jobs:
 
       - name: Install buildozer
         run: |
-          pip3 install --user buildozer cython==0.29.36
+          pip3 install --user buildozer
+          pip3 install --user cython==0.29.36
 
 
       - name: Build APK
         run: |
           export PATH=$PATH:$HOME/.local/bin
-
-          buildozer android clean
-
           buildozer -v android debug
 
 
