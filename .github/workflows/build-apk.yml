@@ -5,63 +5,113 @@ on:
     branches:
       - main
 
-
 jobs:
   build:
 
     runs-on: ubuntu-latest
 
+
     steps:
 
-    - name: Checkout
-      uses: actions/checkout@v4
+      # 下载代码
+      - name: Checkout
+        uses: actions/checkout@v4
 
 
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.10"
+      # Python环境
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
 
 
-    - name: Install dependencies
-      run: |
-        sudo apt update
+      # 安装系统依赖
+      - name: Install dependencies
+        run: |
+          sudo apt update
 
-        sudo apt install -y \
-        git \
-        zip \
-        unzip \
-        openjdk-17-jdk \
-        autoconf \
-        automake \
-        libtool \
-        pkg-config \
-        libffi-dev \
-        libssl-dev \
-        zlib1g-dev
-
-
-    - name: Install build tools
-      run: |
-        pip install --upgrade pip
-
-        pip install \
-        cython==0.29.33 \
-        buildozer==1.5.0
+          sudo apt install -y \
+            git \
+            zip \
+            unzip \
+            openjdk-17-jdk \
+            autoconf \
+            automake \
+            libtool \
+            pkg-config \
+            libffi-dev \
+            libssl-dev \
+            zlib1g-dev
 
 
-    - name: Clean old build
-      run: |
-        rm -rf .buildozer
+      # Android SDK
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
 
-    - name: Build APK
-      run: |
-        buildozer -v android debug
+      # 安装指定SDK
+      - name: Install Android packages
+        run: |
+
+          yes | sdkmanager --licenses
+
+          sdkmanager \
+          "platform-tools" \
+          "platforms;android-35" \
+          "build-tools;35.0.0" \
+          "cmdline-tools;latest" \
+          "ndk;27.0.12077973"
 
 
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: apk
-        path: bin/*.apk
+
+      # 修复路径
+      - name: Add Android tools PATH
+        run: |
+
+          echo "$ANDROID_HOME/build-tools/35.0.0" >> $GITHUB_PATH
+
+          echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
+
+
+
+      # Python打包环境
+      - name: Install Buildozer
+
+        run: |
+
+          python -m pip install --upgrade pip
+
+          pip install \
+          cython==0.29.33 \
+          buildozer==1.5.0
+
+
+
+      # 清理旧缓存
+      - name: Clean
+
+        run: |
+
+          rm -rf .buildozer
+
+
+
+      # 构建APK
+      - name: Build APK
+
+        run: |
+
+          buildozer -v android debug
+
+
+
+      # 上传APK
+      - name: Upload APK
+
+        uses: actions/upload-artifact@v4
+
+        with:
+
+          name: APK
+
+          path: bin/*.apk
