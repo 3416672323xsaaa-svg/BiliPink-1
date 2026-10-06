@@ -12,75 +12,47 @@ permissions:
 
 
 env:
-
   ANDROID_HOME: /usr/local/lib/android/sdk
   ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-
   JAVA_HOME: /usr/lib/jvm/temurin-17-jdk-amd64
-
   GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx2048m"
-
   CYTHON_LANGUAGE_LEVEL: "3"
+  PIP_INDEX_URL: https://pypi.tuna.tsinghua.edu.cn/simple
 
 
 jobs:
-
-
   build-android:
-
-
     runs-on: ubuntu-latest
-
-
     steps:
-
-
     # ==========================
     # 获取代码
     # ==========================
-
     - name: Checkout code
       uses: actions/checkout@v4
-
-
 
     # ==========================
     # Java 17
     # ==========================
-
     - name: Setup Java 17
       uses: actions/setup-java@v4
-
       with:
         distribution: temurin
         java-version: "17"
 
-
-
     # ==========================
     # Python 3.11
     # ==========================
-
     - name: Setup Python
-
       uses: actions/setup-python@v5
-
       with:
         python-version: "3.11"
 
-
-
     # ==========================
-    # Linux依赖（新增cairo系统库）
+    # Linux依赖
     # ==========================
-
     - name: Install dependencies
-
       run: |
-
         sudo apt update
-
-
         sudo apt install -y \
           git \
           zip \
@@ -100,111 +72,56 @@ jobs:
           libcairo2-dev \
           libgirepository1.0-dev
 
-
-
-
     # ==========================
     # Android SDK
     # ==========================
-
     - name: Install Android SDK
-
       run: |
-
-
         SDKMANAGER=$(find "$ANDROID_SDK_ROOT" -name sdkmanager | head -1)
-
-
         if [ -z "$SDKMANAGER" ]; then
-
           echo "sdkmanager not found"
-
           exit 1
-
         fi
-
-
         echo "Using SDK Manager:"
         echo "$SDKMANAGER"
-
-
-
         yes | "$SDKMANAGER" --licenses || true
-
-
-
         "$SDKMANAGER" \
           "platform-tools" \
           "platforms;android-35" \
           "build-tools;35.0.0" \
           "ndk;25.2.9519653" || true
 
-
-
-
     # ==========================
-    # 安装Buildozer
+    # 安装Buildozer（增加重试）
     # ==========================
-
     - name: Install Buildozer
-
       run: |
-
-
-        python -m pip install --upgrade pip setuptools wheel
-
-
-
+        python -m pip install --upgrade pip setuptools wheel --retries 10
         pip install \
           buildozer \
           cython==0.29.36 \
           python-for-android \
           kivy \
-          kivymd
-
-
-
-
+          kivymd \
+          --retries 10
 
     # ==========================
     # 检查环境
     # ==========================
-
     - name: Check environment
-
       run: |
-
-
         export PATH="$HOME/.local/bin:$PATH"
-
-
-
         java -version
-
-
         python --version
-
-
         buildozer --version
-
-
-
-
 
     # ==========================
     # 创建签名
     # ==========================
-
     - name: Create keystore
-
       id: keystore
-
       run: |
-
-
         if [ ! -f release.keystore ]; then
-
-
           keytool \
             -genkeypair \
             -v \
@@ -216,186 +133,81 @@ jobs:
             -storepass android \
             -keypass android \
             -dname "CN=Android"
-
-
-
           echo "new=true" >> $GITHUB_OUTPUT
-
-
         else
-
-
           echo "new=false" >> $GITHUB_OUTPUT
-
-
         fi
-
-
-
-
 
     # ==========================
     # 检查项目
     # ==========================
-
     - name: Check files
-
       run: |
-
-
         ls -la
-
-
-
         if [ ! -f main.py ]; then
-
           echo "main.py missing"
-
           exit 1
-
         fi
-
-
-
         if [ ! -f buildozer.spec ]; then
-
           echo "buildozer.spec missing"
-
           exit 1
-
         fi
-
-
-
-
 
     # ==========================
     # 构建APK
     # ==========================
-
     - name: Build APK
-
       run: |
-
-
         export PATH="$HOME/.local/bin:$PATH"
-
-
         export BUILDOZER_ALLOW_PLATFORM_EXEC=1
-
-
-
         export P4A_RELEASE_KEYSTORE="$PWD/release.keystore"
-
         export P4A_RELEASE_KEYALIAS="release"
-
         export P4A_RELEASE_KEYSTORE_PASSWD="android"
-
         export P4A_RELEASE_KEYALIAS_PASSWD="android"
-
-
-
-
         buildozer -v android release 2>&1 | tee buildozer.log
-
-
-
-
-
 
     # ==========================
     # 收集APK
     # ==========================
-
     - name: Collect APK
-
       run: |
-
-
         mkdir -p output
-
-
-
         find . -name "*.apk" -exec cp {} output/ \;
-
-
-
         echo "APK output:"
-
-
-
         ls -la output
-
-
-
         if [ ! "$(ls -A output)" ]; then
-
           echo "No APK generated"
-
           exit 1
-
         fi
-
-
-
-
 
     # ==========================
     # 上传APK
     # ==========================
-
     - name: Upload APK
-
       uses: actions/upload-artifact@v4
-
       with:
-
         name: Android-APK
-
         path: output/*.apk
-
         retention-days: 30
-
-
-
-
 
     # ==========================
     # 上传签名
     # ==========================
-
     - name: Upload keystore
-
       if: steps.keystore.outputs.new == 'true'
-
       uses: actions/upload-artifact@v4
-
       with:
-
         name: Android-keystore
-
         path: release.keystore
-
         retention-days: 1
-
-
-
-
 
     # ==========================
     # 上传日志
     # ==========================
-
     - name: Upload build log
-
       if: always()
-
       uses: actions/upload-artifact@v4
-
       with:
-
         name: Build-log
-
         path: buildozer.log
-
         retention-days: 7
