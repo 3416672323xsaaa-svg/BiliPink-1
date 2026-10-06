@@ -1,72 +1,99 @@
-name: 构建安卓
+name: Build Kivy APK Final
 
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
+env:
+  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+  ANDROID_HOME: /usr/local/lib/android/sdk
+  JAVA_HOME: /usr/lib/jvm/temurin-17-jdk-amd64
+
 jobs:
-  build-android:
+  build-apk:
     runs-on: ubuntu-latest
     steps:
-      - name: 检出代码
+      - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: 设置 JDK 17
+      - name: Setup JDK17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: 缓存Buildozer依赖（加速后续打包）
-        uses: actions/cache@v4
+      - name: Setup Python3.9
+        uses: actions/setup-python@v5
         with:
-          path: |
-            ~/.buildozer
-            ~/.local/share/python-for-android
-          key: ${{ runner.os }}-buildozer-${{ hashFiles('*.spec') }}
-          restore-keys: |
-            ${{ runner.os }}-buildozer-
+          python-version: '3.9'
 
-      - name: 安装系统依赖
+      - name: Install system libs
         run: |
           sudo apt-get update
-          sudo apt-get install -y git python3 python3-pip zip unzip openjdk-17-jdk libffi-dev libssl-dev autoconf automake libtool libcairo2-dev
+          sudo apt-get install -y git zip unzip autoconf automake libtool pkg-config zlib1g-dev libncurses5-dev cmake libffi-dev libssl-dev libltdl-dev openjdk-17-jdk
 
-      - name: 安装Python依赖与buildozer
+      - name: Install python packages
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install buildozer
+          pip3 install buildozer cython==0.29.33 kivy kivymd python-for-android
 
-      - name: Buildozer初始化&构建Release APK
+      - name: Generate release keystore
+        id: genkey
+        run: |
+          KEYFILE=app-release.keystore
+          if [ ! -f "$KEYFILE" ];then
+            keytool -genkey -v -keystore $KEYFILE -alias appkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=dev,OU=dev,O=dev,L=local,ST=local,C=CN"
+            echo "NEW_KEY=true" >> $GITHUB_OUTPUT
+          else
+            echo "NEW_KEY=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build buildozer release apk
         run: |
           export PATH="$HOME/.local/bin:$PATH"
-          java -version
-          buildozer -v android release 2>&1 | tee buildozer.log
-          find . -name "*.apk" -print > apks_found.txt
-          cat apks_found.txt
-          APK_PATH=$(head -n1 apks_found.txt)
-          cp -v "$APK_PATH" ./app-release.apk
-          ls -la ./*.apk
+          rm -rf .buildozer build.log output-release.apk
+          export BUILDOZER_ALLOW_PLATFORM_EXEC=1
+          export P4A_RELEASE_KEYSTORE="$PWD/app-release.keystore"
+          export P4A_RELEASE_KEYALIAS="appkey"
+          export P4A_RELEASE_KEYSTORE_PASSWD="android"
+          export P4A_RELEASE_KEYALIAS_PASSWD="android"
+          buildozer -v android release 2>&1 | tee build.log
+          find . -name "*.apk" -exec cp {} ./output-release.apk \; 2>/dev/null || true
 
-      - name: 上传密钥库工件
+      - name: Detect build result
+        id: detect
+        run: |
+          if [ -f "./output-release.apk" ];then
+            echo "SUCCESS=yes" >> $GITHUB_OUTPUT
+            ls -lh ./output-release.apk
+          else
+            echo "SUCCESS=no" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload APK artifact
+        if: steps.detect.outputs.SUCCESS == 'yes'
         uses: actions/upload-artifact@v4
         with:
-          name: 安卓密钥库
-          path: |
-            ./.buildozer/android/platform/android-keystore/*.keystore
-          retention-days: 1
+          name: MyApp-APK
+          path: ./output-release.apk
+          retention-days: 14
 
-      - name: 上传APK构建产物
+      - name: Upload keystore file
+        if: steps.genkey.outputs.NEW_KEY == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: kivy-app-build
-          path: ./app-release.apk
-          retention-days: 1
+          name: keystore-backup
+          path: ./app-release.keystore
+          retention-days: 14
 
-      - name: 上传编译日志
+      - name: Upload build log
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: 构建日志
-          path: ./buildozer.log
-          retention-days: 1
+          name: build-log-text
+          path: ./build.log
+          retention-days: 7
