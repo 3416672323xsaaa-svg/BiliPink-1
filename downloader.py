@@ -10,7 +10,17 @@ from bili_api import get_bili_stat, get_bili_cid
 
 
 class Downloader:
-    def __init__(self, save_root: str):
+    def __init__(self, save_root: str = None):
+        # 如果没有传入路径，自动使用Kivy APP私有目录（安卓高版本安全，不需要存储权限）
+        if save_root is None:
+            try:
+                from kivy.app import App
+                app = App.get_running_app()
+                save_root = Path(app.user_data_dir) / "Downloads"
+            except Exception:
+                # 兜底，本地电脑运行场景
+                save_root = Path("./Downloads")
+
         self.save_root = Path(save_root)
         self.save_root.mkdir(exist_ok=True, parents=True)
         self.running_tasks = {}
@@ -35,7 +45,7 @@ class Downloader:
         return cleaned
 
     def get_video_info(self, url_or_bv: str):
-        """解析视频全部信息，无解析回调，APK打包稳定"""
+        """解析视频全部信息，APK打包稳定"""
         bv = self.extract_bv(url_or_bv)
         if not bv:
             return {"ok": False, "msg": "无法识别BV/AV号"}
