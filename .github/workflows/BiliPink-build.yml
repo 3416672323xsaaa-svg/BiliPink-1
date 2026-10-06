@@ -2,6 +2,9 @@ name: Build Kivy Android APK In Release Mode
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 permissions:
   contents: write
@@ -77,11 +80,9 @@ jobs:
         python --version
         buildozer --version
         
-        # 修正拼写错误 BUILDOZER
         export BUILDOZER_ALLOW_PLATFORM_EXEC=1
         export USE_COLORS=0
         
-        # 设置p4a签名环境变量
         export P4A_RELEASE_KEYSTORE="$PWD/DomainName.PackageName.keystore"
         export P4A_RELEASE_KEYALIAS="DomainName.PackageName"
         export P4A_RELEASE_KEYSTORE_PASSWD="android"
@@ -89,7 +90,6 @@ jobs:
         
         buildozer -v android release 2>&1 | tee buildozer.log
         
-        # 复制apk到当前目录
         find . -name "*.apk" -exec cp {} ./ \; 2>/dev/null || true
         find . -name "*.aab" -exec cp {} ./ \; 2>/dev/null || true
 
@@ -112,7 +112,6 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: kivy-app-build
-        # 修改路径：上传当前目录复制出来的apk
         path: ./*.apk
         retention-days: 30
 
