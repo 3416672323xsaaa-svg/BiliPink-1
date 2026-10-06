@@ -5,57 +5,122 @@ on:
     branches:
       - main
 
+
 jobs:
+
   build:
 
     runs-on: ubuntu-latest
 
 
+    env:
+      ANDROID_HOME: ${{ github.workspace }}/android-sdk
+      ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
+
+
     steps:
 
-    - uses: actions/checkout@v4
+
+      - name: Checkout
+        uses: actions/checkout@v4
 
 
-    - name: Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: temurin
-        java-version: 17
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
 
 
-    - name: Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.11"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
 
-    - name: Dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y git zip unzip
-        pip install --upgrade pip
-        pip install buildozer cython
+
+      - name: Install dependencies
+        run: |
+
+          sudo apt update
+
+          sudo apt install -y \
+          git \
+          zip \
+          unzip \
+          wget \
+          autoconf \
+          automake \
+          libtool \
+          pkg-config \
+          zlib1g-dev \
+          libffi-dev \
+          libssl-dev
 
 
-    - name: Android SDK
-      uses: android-actions/setup-android@v3
+          python -m pip install --upgrade pip
+
+          pip install \
+          buildozer \
+          cython==0.29.36
 
 
-    - name: Android packages
-      run: |
-        sdkmanager \
-        "platform-tools" \
-        "platforms;android-33" \
-        "build-tools;33.0.2"
+
+      - name: Install Android SDK
+        run: |
+
+          mkdir -p $ANDROID_HOME/cmdline-tools
 
 
-    - name: Build APK
-      run: |
-        buildozer android debug
+          cd /tmp
 
 
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: apk
-        path: bin/*.apk
+          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+
+
+          unzip commandlinetools-linux-9477386_latest.zip
+
+
+          mv cmdline-tools $ANDROID_HOME/cmdline-tools/latest
+
+
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
+
+          echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
+
+
+
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
+
+
+
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+          "platform-tools" \
+          "platforms;android-33" \
+          "build-tools;33.0.2"
+
+
+
+      - name: Build APK
+        run: |
+
+          buildozer android debug
+
+
+
+      - name: Check APK
+        run: |
+
+          find . -name "*.apk"
+
+
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+
+          name: BiliPink-APK
+
+          path: "**/*.apk"
