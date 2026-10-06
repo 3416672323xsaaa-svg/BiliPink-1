@@ -7,12 +7,19 @@ on:
 
 jobs:
   build:
+
     runs-on: ubuntu-latest
 
     steps:
 
       - name: Checkout
         uses: actions/checkout@v4
+
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
 
       - name: Install dependencies
@@ -32,36 +39,48 @@ jobs:
             pkg-config
 
 
-      - name: Install buildozer
+      - name: Install build tools
         run: |
-          pip3 install --user buildozer==1.5.0
+          pip3 install --user buildozer
           pip3 install --user cython==0.29.36
-          export PATH=$PATH:$HOME/.local/bin
-          buildozer --version
+
+
+      - name: Cache Buildozer
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.buildozer
+          key: buildozer-${{ runner.os }}-${{ hashFiles('**/buildozer.spec') }}
 
 
       - name: Build APK
         run: |
           export PATH=$PATH:$HOME/.local/bin
-          buildozer -v android debug 2>&1 | tee build.log
+          buildozer android debug
 
 
       - name: Find APK
         run: |
-          echo "Searching APK..."
-          find . -name "*.apk"
+          echo "========== APK LIST =========="
+          find . -type f -name "*.apk"
+          echo "=============================="
 
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: apk
+          name: BiliPink-APK
           path: |
+            **/bin/*.apk
             **/*.apk
+          if-no-files-found: error
 
 
       - name: Upload build log
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: build-log
-          path: build.log
+          path: |
+            **/*.log
+          if-no-files-found: ignore
