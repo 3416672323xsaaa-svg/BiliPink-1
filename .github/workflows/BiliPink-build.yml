@@ -1,4 +1,4 @@
-name:构建Kivy APK
+name: Build Kivy APK
 on:
   push:
     branches: [ main ]
@@ -15,22 +15,22 @@ jobs:
           path: |
             ~/.buildozer
             ~/.python-for-android
-          key: ${{ runner.os }}‑buildozer‑v1
+          key: ${{ runner.os }}-buildozer-v1
 
       - name: 设置JDK17
-        uses: actions/setup‑java@v5
+        uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
 
       - name: 安装系统依赖
         run: |
-          sudo apt‑get update
-          sudo apt‑get install‑y python3‑pip python3‑venv git unzip libffi‑dev libssl‑dev autoconf automake libtool patch cmake
+          sudo apt-get update
+          sudo apt-get install -y python3-pip python3-venv git unzip libffi-dev libssl-dev autoconf automake libtool patch cmake
 
       - name: 安装buildozer
         run: |
-          python3‑m venv venv
+          python3 -m venv venv
           source venv/bin/activate
           pip install buildozer
 
@@ -46,13 +46,13 @@ jobs:
           if [ ! -f bin/*.apk ];then echo "❌没有生成APK！构建失败";exit 1;fi
 
       - name: 上传APK工件
-        uses: actions/upload‑artifact@v4
+        uses: actions/upload-artifact@v4
         with:
-          name: App‑APK文件
+          name: App-APK文件
           path: bin/*.apk
 
       - name: 保存完整构建日志
-        uses: actions/upload‑artifact@v4
+        uses: actions/upload-artifact@v4
         with:
-          name:构建日志文本
+          name: 构建日志文本
           path: buildozer.log
