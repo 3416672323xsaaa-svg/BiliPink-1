@@ -10,6 +10,14 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
 
+      - name: Increase swap memory
+        run: |
+          sudo fallocate -l 6G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          free -h
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
