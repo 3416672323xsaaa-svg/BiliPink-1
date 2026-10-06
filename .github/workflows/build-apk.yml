@@ -37,6 +37,8 @@ jobs:
         run: |
           pip3 install --user buildozer==1.5.0
           pip3 install --user cython==0.29.36
+          export PATH=$PATH:$HOME/.local/bin
+          buildozer --version
 
 
       - name: Build APK
@@ -45,21 +47,37 @@ jobs:
           buildozer -v android debug 2>&1 | tee build.log
 
 
-      - name: Search APK
-        if: always()
+      - name: Find APK
         run: |
           echo "Searching APK..."
           find . -type f -name "*.apk" -print
 
 
+      - name: Prepare APK
+        run: |
+          mkdir -p output
+
+          APK=$(find . -type f -name "*.apk" | head -n 1)
+
+          echo "APK path:"
+          echo "$APK"
+
+          if [ -z "$APK" ]; then
+            echo "No APK found!"
+            exit 1
+          fi
+
+          cp "$APK" output/BiliPink.apk
+
+          ls -lh output/
+
+
       - name: Upload APK
-        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: apk
-          path: |
-            **/*.apk
-          if-no-files-found: warn
+          name: BiliPink-APK
+          path: output/BiliPink.apk
+          if-no-files-found: error
 
 
       - name: Upload build log
