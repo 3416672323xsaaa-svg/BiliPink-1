@@ -10,110 +10,48 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    env:
-      ANDROID_HOME: ${{ github.workspace }}/android-sdk
-      ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
-
     steps:
 
-      # 下载代码
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
 
 
-      # 安装 Python
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
 
 
-      # 安装系统依赖
-      - name: Install dependencies
-        run: |
-          sudo apt update
-
-          sudo apt install -y \
-          git \
-          zip \
-          unzip \
-          wget \
-          build-essential \
-          libffi-dev \
-          libssl-dev \
-          python3-dev \
-          openjdk-17-jdk
-
-
-      # 安装 Android SDK
-      - name: Setup Android SDK
-        run: |
-
-          mkdir -p $ANDROID_HOME/cmdline-tools
-
-          cd /tmp
-
-          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-
-          unzip commandlinetools-linux-9477386_latest.zip
-
-          mv cmdline-tools $ANDROID_HOME/cmdline-tools/latest
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y \
+        git \
+        zip \
+        unzip \
+        openjdk-17-jdk \
+        python3-pip \
+        autoconf \
+        libtool \
+        pkg-config \
+        zlib1g-dev \
+        libffi-dev \
+        libssl-dev
 
 
-          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
+    - name: Install Buildozer
+      run: |
+        pip install --upgrade pip
+        pip install buildozer cython==0.29.36
 
 
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
+    - name: Build APK
+      run: |
+        yes | buildozer android debug
 
 
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
-          "platform-tools" \
-          "platforms;android-35" \
-          "build-tools;37.0.0"
-
-
-
-      # 安装 Python 工具
-      - name: Install Buildozer
-        run: |
-
-          pip install --upgrade pip
-
-          pip install \
-          cython==0.29.36 \
-          buildozer
-
-
-
-      # 再确认许可证
-      - name: Accept licenses
-        run: |
-          yes | sdkmanager --licenses
-
-
-
-      # 编译 APK
-      - name: Build APK
-        run: |
-
-          buildozer android debug
-
-
-
-      # 找 APK
-      - name: Find APK
-        run: |
-
-          find . -name "*.apk"
-
-
-
-      # 上传 APK
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-
-          name: APK
-
-          path: |
-            bin/*.apk
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: APK
+        path: bin/*.apk
