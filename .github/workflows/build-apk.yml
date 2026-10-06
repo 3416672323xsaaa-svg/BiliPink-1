@@ -1,25 +1,20 @@
 name: Build APK
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
 
-
 jobs:
-
   build:
 
     runs-on: ubuntu-22.04
-
-    timeout-minutes: 120
-
 
     steps:
 
     - name: Checkout
       uses: actions/checkout@v4
-
 
 
     - name: Setup Java 17
@@ -29,50 +24,58 @@ jobs:
         java-version: 17
 
 
-
     - name: Install dependencies
       run: |
-
         sudo apt update
 
         sudo apt install -y \
-          python3-pip \
-          git \
-          unzip \
-          autoconf \
-          automake \
-          libtool \
-          pkg-config \
-          zlib1g-dev
+        python3-pip \
+        python3-setuptools \
+        python3-wheel \
+        git \
+        zip \
+        unzip \
+        autoconf \
+        libtool \
+        pkg-config \
+        zlib1g-dev \
+        libncurses5-dev \
+        libncursesw5-dev \
+        libtinfo5
 
 
+    - name: Install Buildozer
+      run: |
         python3 -m pip install --upgrade pip
-
-        pip3 install \
-          buildozer \
-          cython==0.29.36
+        pip install buildozer cython==0.29.36
 
 
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
 
-    - name: Clean old cache
+
+    - name: Install Android packages
       run: |
 
-        rm -rf ~/.buildozer
+        yes | sdkmanager --licenses
 
+        sdkmanager \
+        "platform-tools" \
+        "platforms;android-34" \
+        "build-tools;34.0.0" \
+        "ndk;25.2.9519653"
 
 
     - name: Build APK
       run: |
 
-        yes | buildozer android debug
+        buildozer android clean
 
+        buildozer -v android debug
 
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
-
       with:
-
-        name: BiliPink-APK
-
-        path: "**/*.apk"
+        name: apk
+        path: bin/*.apk
