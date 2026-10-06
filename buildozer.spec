@@ -1,33 +1,33 @@
 [app]
-
-title = BiliPink
-
-package.name = bilipink
-
-package.domain = org.example
+title = MyApp
+package.name = myapp
+package.domain = org.myapp
 
 source.dir = .
 
-source.include_exts = py,png,jpg,kv
+source.include_exts = py,png,jpg,jpeg,svg,kv,json
 
 version = 1.0
 
-requirements = python3,kivy
+requirements = python3,kivy,kivymd,requests
 
 orientation = portrait
 
-fullscreen = 0
+android.permissions = INTERNET
 
-
-[buildozer]
-
-log_level = 2
-
-
-[android]
-
-android.api = 33
+android.api = 35
 
 android.minapi = 23
 
+android.ndk = 25.2.9519653
+
 android.archs = arm64-v8a
+
+android.release_keystore = %(dir)s/release.keystore
+android.release_keyalias = release
+android.release_keystore_password = android
+android.release_keyalias_password = android
+
+[buildozer]
+log_level = 2
+warn_on_root = 1
