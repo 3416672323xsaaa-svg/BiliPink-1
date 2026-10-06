@@ -5,93 +5,28 @@ on:
     branches:
       - main
 
-
 jobs:
   build:
 
     runs-on: ubuntu-latest
 
-
     steps:
 
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
 
+    - name: Install
+      run: |
+        sudo apt update
+        sudo apt install -y python3-pip
+        pip3 install buildozer cython
 
-      - name: Install dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y \
-            python3-pip \
-            python3-setuptools \
-            python3-wheel \
-            git \
-            zip \
-            unzip \
-            openjdk-17-jdk \
-            autoconf \
-            automake \
-            libtool \
-            pkg-config
+    - name: Build APK
+      run: |
+        buildozer android debug
 
-
-      - name: Install buildozer
-        run: |
-          pip3 install --user buildozer==1.5.0
-          pip3 install --user cython==0.29.36
-          export PATH=$PATH:$HOME/.local/bin
-          buildozer --version
-
-
-      - name: Build APK
-        run: |
-          export PATH=$PATH:$HOME/.local/bin
-          buildozer -v android debug 2>&1 | tee build.log
-          test ${PIPESTATUS[0]} -eq 0
-
-
-      - name: Find APK
-        run: |
-          echo "Searching APK..."
-          find . -type f -name "*.apk" -print
-
-
-      - name: Prepare APK
-        run: |
-          mkdir -p output
-
-          echo "Searching all apk files..."
-
-          APK=$(find . -type f -name "*.apk" | head -n 1)
-
-          if [ -z "$APK" ]; then
-            echo "APK not found!"
-            echo "Current files:"
-            ls -la
-            find . -maxdepth 3 -type d
-            exit 1
-          fi
-
-          echo "Found APK:"
-          echo "$APK"
-
-          cp "$APK" output/BiliPink.apk
-
-          ls -lh output
-
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: BiliPink-APK
-          path: output/BiliPink.apk
-          if-no-files-found: error
-
-
-      - name: Upload build log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-log
-          path: build.log
-          if-no-files-found: ignore
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: BiliPink-APK
+        path: bin/*.apk
