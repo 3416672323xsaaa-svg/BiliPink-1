@@ -18,10 +18,20 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: 缓存Buildozer依赖（加速后续打包）
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.buildozer
+            ~/.local/share/python-for-android
+          key: ${{ runner.os }}-buildozer-${{ hashFiles('*.spec') }}
+          restore-keys: |
+            ${{ runner.os }}-buildozer-
+
       - name: 安装系统依赖
         run: |
           sudo apt-get update
-          sudo apt-get install -y git python3 python3-pip zip unzip openjdk-17-jdk libffi-dev libssl-dev autoconf automake libtool
+          sudo apt-get install -y git python3 python3-pip zip unzip openjdk-17-jdk libffi-dev libssl-dev autoconf automake libtool libcairo2-dev
 
       - name: 安装Python依赖与buildozer
         run: |
@@ -32,9 +42,7 @@ jobs:
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           java -version
-          buildozer init
           buildozer -v android release 2>&1 | tee buildozer.log
-          # 查找全部apk，打印路径，复制到工作流根目录
           find . -name "*.apk" -print > apks_found.txt
           cat apks_found.txt
           APK_PATH=$(head -n1 apks_found.txt)
