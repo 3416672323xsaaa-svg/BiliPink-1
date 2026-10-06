@@ -10,8 +10,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout
         uses: actions/checkout@v4
+
 
       - name: Install dependencies
         run: |
@@ -29,22 +31,33 @@ jobs:
             libtool \
             pkg-config
 
+
       - name: Install buildozer
         run: |
-          pip3 install --user buildozer
+          pip3 install --user buildozer==1.5.0
           pip3 install --user cython==0.29.36
+          export PATH=$PATH:$HOME/.local/bin
+          buildozer --version
+
+
+      - name: Prepare buildozer
+        run: |
+          export PATH=$PATH:$HOME/.local/bin
+          buildozer android list_targets
+
 
       - name: Build APK
         run: |
           export PATH=$PATH:$HOME/.local/bin
-          buildozer -v android clean
           buildozer -v android debug 2>&1 | tee build.log
+
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: apk
           path: bin/*.apk
+
 
       - name: Upload build log
         uses: actions/upload-artifact@v4
