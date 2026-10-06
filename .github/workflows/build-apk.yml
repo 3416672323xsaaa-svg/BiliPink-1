@@ -12,7 +12,7 @@ jobs:
 
     runs-on: ubuntu-22.04
 
-    timeout-minutes: 90
+    timeout-minutes: 120
 
 
     env:
@@ -22,11 +22,13 @@ jobs:
 
     steps:
 
+
     - name: Checkout
       uses: actions/checkout@v4
 
 
-    - name: Install dependencies
+
+    - name: Install system packages
       run: |
 
         sudo apt update
@@ -37,21 +39,26 @@ jobs:
           unzip \
           wget \
           git \
-          openjdk-17-jdk
+          openjdk-17-jdk \
+          autoconf \
+          automake \
+          libtool \
+          pkg-config \
+          zlib1g-dev
 
 
         echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
 
-        echo "/usr/lib/jvm/java-17-openjdk-amd64/bin" >> $GITHUB_PATH
 
 
-
-    - name: Install Python packages
+    - name: Install Buildozer
       run: |
 
         python3 -m pip install --upgrade pip
 
-        pip3 install buildozer cython==0.29.36
+        pip3 install \
+          buildozer \
+          cython==0.29.36
 
 
 
@@ -81,20 +88,25 @@ jobs:
         export PATH=$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
 
 
-
-        java -version
-
-
-        sdkmanager --version
-
-
         yes | sdkmanager --licenses
 
 
         sdkmanager \
-        "platform-tools" \
-        "platforms;android-35" \
-        "build-tools;35.0.0"
+          "platform-tools" \
+          "platforms;android-35" \
+          "build-tools;35.0.0"
+
+
+
+    - name: Prepare Buildozer
+      run: |
+
+        rm -rf ~/.buildozer
+
+        rm -rf .buildozer
+
+
+        buildozer --version
 
 
 
@@ -103,10 +115,6 @@ jobs:
 
         export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 
-        export PATH=$JAVA_HOME/bin:$PATH
-
-
-        buildozer android clean
 
         buildozer -v android debug
 
@@ -114,6 +122,7 @@ jobs:
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
+
 
       with:
 
