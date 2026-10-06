@@ -5,12 +5,10 @@ on:
     branches:
       - main
 
-
 jobs:
   build:
 
     runs-on: ubuntu-latest
-
 
     steps:
 
@@ -49,35 +47,39 @@ jobs:
           buildozer -v android debug 2>&1 | tee build.log
 
 
-      # 保险搜索 APK
       - name: Find APK
         run: |
-          echo "=============================="
           echo "Searching APK..."
-          echo "=============================="
-
           find . -type f -name "*.apk" -print
 
-          echo "=============================="
-          echo "All files:"
-          echo "=============================="
 
-          find . -type f | head -200
+      - name: Prepare APK
+        run: |
+          mkdir -p output
+          
+          APK=$(find . -type f -name "*.apk" | head -n 1)
+          
+          if [ -z "$APK" ]; then
+            echo "APK not found!"
+            exit 1
+          fi
+          
+          echo "Found APK:"
+          echo "$APK"
+          
+          cp "$APK" output/BiliPink.apk
+          
+          ls -lh output/
 
 
-      # 上传APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: apk
-          path: |
-            .
-            **/*.apk
-            bin/*.apk
+          name: BiliPink-APK
+          path: output/BiliPink.apk
           if-no-files-found: error
 
 
-      # 上传日志
       - name: Upload build log
         if: always()
         uses: actions/upload-artifact@v4
