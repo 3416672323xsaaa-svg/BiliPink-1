@@ -34,7 +34,7 @@ jobs:
       - name: Install system libs
         run: |
           sudo apt-get update
-          sudo apt-get install -y git zip unzip autoconf automake libtool pkg-config zlib1g-dev libncurses5-dev cmake libffi-dev libssl-dev libltdl-dev openjdk-17-jdk
+          sudo apt-get install -y libcairo2-dev libjpeg-turbo8-dev libpng-dev libtiff-dev git zip unzip autoconf automake libtool pkg-config zlib1g-dev libncurses5-dev cmake libffi-dev libssl-dev libltdl-dev openjdk-17-jdk
 
       - name: Install python packages
         run: |
