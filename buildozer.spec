@@ -1,91 +1,54 @@
 [app]
-
-# 应用名称
+#标题允许中文 title language is not limited
 title = appname
-
-# 包名（只能英文）
 package.name = packagename
 
-# 包域名
-package.domain = io.packagename
-
-
-# 项目目录
+#release模式不能用org.test 'org.test' can't be used in release mode
+package.domain = org.test
+#工作目录 working directory
 source.dir = .
-
-# 包含的文件类型
-source.include_exts = py,png,jpg,jpeg,atlas
-
-
-# 版本
+#需要打包的文件类型 file types to be packed
+source.include_exts = py,png,jpg,kv,atlas
+#打包image目录下的文件 Pack files in the image directory
+#source.include_patterns = image/*
 version = 0.0.1
-
-
-# Python依赖
-# 第一次先用最小配置，成功后再加kivymd
-requirements = python3,kivy
-
-
-# 入口文件
-# 根目录必须有main.py
+#依赖库,后二为打包需要 The last two are needed for packaging
+requirements = python3,kivy,kivymd,libiconv,libffi
+#icon.filename = icon.png
+#presplash.filename = presplash.png
+#fullscreen = 0
+#orientation = portrait
+#主程序 Main,what can I say.Mamba out
 entrypoint = main.py
 
-
-
-# Android权限
+#这些不要改 Don't change these
+android.accept_sdk_license = True
+android.allow_api_min = 21
+android.api = 33
+android.minapi = 21
+android.ndk = 25b
+exclude_patterns = **/test/*, **/tests/*
+android.gradle_download = https://services.gradle.org/distributions/gradle-7.6.4-all.zip
+android.gradle_plugin = 7.4.2
+android.sdk = 33
+android.ndk_api = 21
+p4a.gradle_dependencies = gradle:7.6.4
+p4a.bootstrap = sdl2
+p4a.gradle_options = -Dorg.gradle.java.home=/usr/lib/jvm/java-17-openjdk-amd64
+#打包需要网络权限 Network permission is required for packaging
 android.permissions = INTERNET
 
+#以下为release模式需要 Following is required for release mode
 
+#强制构建APK而不是AAB,但没用 Why does it build .aab instead of .apk?
+#android.aab = False
 
-# Android SDK
-android.accept_sdk_license = True
-
-android.api = 33
-
-android.minapi = 21
-
-android.allow_api_min = 21
-
-
-# NDK版本
-android.ndk = 25b
-
-
-
-# 使用SDL2
-p4a.bootstrap = sdl2
-
-
-# 手动指定python-for-android
-p4a.source_dir = /home/runner/.buildozer/p4a
-
-
-
-# 输出APK，不生成AAB
-android.release_artifact = apk
-
-
-
-# 排除文件
-exclude_patterns = **/test/*, **/tests/*
-
-
-
-# 签名
-# 如果没有这个文件，先注释掉这四行
-android.keystore = app-release.keystore
-android.keystore_storepass = android
-android.keystore_keypass = android
-android.keystore_alias = appkey
-
-
+#签名配置 signature configuration
+#android.keystore = /home/runner/work/RepositoryName/AndAgain/DomainName.PackageName.keystore
+#android.keystore_storepass = android
+#android.keystore_keypass = android
+#android.keystore_alias = DomainName.PackageName
 
 [buildozer]
-
-
-# 日志等级
 log_level = 2
-
-
-# 不建议root警告
 warn_on_root = 1
