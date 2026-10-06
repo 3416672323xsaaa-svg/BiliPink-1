@@ -1,54 +1,397 @@
-name: Build Kivy Android APK FinalTry
+name: Build Kivy Android APK Release
+
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
+
+
+permissions:
+  contents: write
+  actions: read
+
 
 env:
-  JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
-  ANDROID_SDK_ROOT: $GITHUB_WORKSPACE/android-sdk
-  ANDROID_HOME: $GITHUB_WORKSPACE/android-sdk
+
+  ANDROID_HOME: /usr/local/lib/android/sdk
+  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
+  JAVA_HOME: /usr/lib/jvm/temurin-17-jdk-amd64
+
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx2048m"
+
+  CYTHON_LANGUAGE_LEVEL: "3"
+
 
 jobs:
-  build:
-    runs-on: ubuntu‑latest
+
+
+  build-android:
+
+
+    runs-on: ubuntu-latest
+
+
     steps:
-      - uses: actions/checkout@v4
 
-      - name: Setup Python3.9
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.9'
 
-      - name: Install system libs
-        run: |
-          sudo apt‑get update
-          sudo apt‑get install ‑y git zip unzip wget autoconf libtool pkg‑config cmake libffi‑dev libssl‑dev curl
+    # ==========================
+    # 获取代码
+    # ==========================
 
-      - name: Pre‑fetch offline Android SDK bundle
-        run: |
-          mkdir -p $ANDROID_SDK_ROOT
-          wget -q https://github.com/lzhiyong/android-sdk-bundle/releases/download/sdk37/android-sdk‑bundle‑37.tar.xz -O sdk.tar.xz
-          tar -xf sdk.tar.xz -C $ANDROID_SDK_ROOT
-          rm -f sdk.tar.xz
-          ls -la $ANDROID_SDK_ROOT
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Install buildozer & dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install buildozer cython==0.29.33 kivy kivymd python‑for‑android
 
-      - name: Build debug APK
-        run: |
-          buildozer android debug
 
-      - name: Prepare output folder
-        run: |
-          mkdir -p ./out_apk
-          find ./.buildozer/android/platform/android/app/build/outputs/apk -name "*.apk" -exec cp {} ./out_apk/ \;
+    # ==========================
+    # Java 17
+    # ==========================
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Final‑APK‑Build
-          path: ./out_apk/*.apk
+    - name: Setup Java 17
+      uses: actions/setup-java@v4
+
+      with:
+        distribution: temurin
+        java-version: "17"
+
+
+
+    # ==========================
+    # Python 3.11
+    # ==========================
+
+    - name: Setup Python
+
+      uses: actions/setup-python@v5
+
+      with:
+        python-version: "3.11"
+
+
+
+    # ==========================
+    # Linux依赖
+    # ==========================
+
+    - name: Install dependencies
+
+      run: |
+
+        sudo apt update
+
+
+        sudo apt install -y \
+          git \
+          zip \
+          unzip \
+          gettext \
+          autoconf \
+          automake \
+          libtool \
+          pkg-config \
+          zlib1g-dev \
+          libncurses5-dev \
+          libncursesw5-dev \
+          cmake \
+          libffi-dev \
+          libssl-dev \
+          libltdl-dev
+
+
+
+
+    # ==========================
+    # Android SDK
+    # ==========================
+
+    - name: Install Android SDK
+
+      run: |
+
+
+        SDKMANAGER=$(find "$ANDROID_SDK_ROOT" -name sdkmanager | head -1)
+
+
+        if [ -z "$SDKMANAGER" ]; then
+
+          echo "sdkmanager not found"
+
+          exit 1
+
+        fi
+
+
+        echo "Using SDK Manager:"
+        echo "$SDKMANAGER"
+
+
+
+        yes | "$SDKMANAGER" --licenses || true
+
+
+
+        "$SDKMANAGER" \
+          "platform-tools" \
+          "platforms;android-35" \
+          "build-tools;35.0.0" \
+          "ndk;25.2.9519653" || true
+
+
+
+
+    # ==========================
+    # 安装Buildozer
+    # ==========================
+
+    - name: Install Buildozer
+
+      run: |
+
+
+        python -m pip install --upgrade pip setuptools wheel
+
+
+
+        pip install \
+          buildozer \
+          cython==0.29.36 \
+          python-for-android \
+          kivy \
+          kivymd
+
+
+
+
+
+    # ==========================
+    # 检查环境
+    # ==========================
+
+    - name: Check environment
+
+      run: |
+
+
+        export PATH="$HOME/.local/bin:$PATH"
+
+
+
+        java -version
+
+
+        python --version
+
+
+        buildozer --version
+
+
+
+
+
+    # ==========================
+    # 创建签名
+    # ==========================
+
+    - name: Create keystore
+
+      id: keystore
+
+      run: |
+
+
+        if [ ! -f release.keystore ]; then
+
+
+          keytool \
+            -genkeypair \
+            -v \
+            -keystore release.keystore \
+            -alias release \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass android \
+            -keypass android \
+            -dname "CN=Android"
+
+
+
+          echo "new=true" >> $GITHUB_OUTPUT
+
+
+        else
+
+
+          echo "new=false" >> $GITHUB_OUTPUT
+
+
+        fi
+
+
+
+
+
+    # ==========================
+    # 检查项目
+    # ==========================
+
+    - name: Check files
+
+      run: |
+
+
+        ls -la
+
+
+
+        if [ ! -f main.py ]; then
+
+          echo "main.py missing"
+
+          exit 1
+
+        fi
+
+
+
+        if [ ! -f buildozer.spec ]; then
+
+          echo "buildozer.spec missing"
+
+          exit 1
+
+        fi
+
+
+
+
+
+    # ==========================
+    # 构建APK
+    # ==========================
+
+    - name: Build APK
+
+      run: |
+
+
+        export PATH="$HOME/.local/bin:$PATH"
+
+
+        export BUILDOZER_ALLOW_PLATFORM_EXEC=1
+
+
+
+        export P4A_RELEASE_KEYSTORE="$PWD/release.keystore"
+
+        export P4A_RELEASE_KEYALIAS="release"
+
+        export P4A_RELEASE_KEYSTORE_PASSWD="android"
+
+        export P4A_RELEASE_KEYALIAS_PASSWD="android"
+
+
+
+
+        buildozer -v android release 2>&1 | tee buildozer.log
+
+
+
+
+
+
+    # ==========================
+    # 收集APK
+    # ==========================
+
+    - name: Collect APK
+
+      run: |
+
+
+        mkdir -p output
+
+
+
+        find . -name "*.apk" -exec cp {} output/ \;
+
+
+
+        echo "APK output:"
+
+
+
+        ls -la output
+
+
+
+        if [ ! "$(ls -A output)" ]; then
+
+          echo "No APK generated"
+
+          exit 1
+
+        fi
+
+
+
+
+
+    # ==========================
+    # 上传APK
+    # ==========================
+
+    - name: Upload APK
+
+      uses: actions/upload-artifact@v4
+
+      with:
+
+        name: Android-APK
+
+        path: output/*.apk
+
+        retention-days: 30
+
+
+
+
+
+    # ==========================
+    # 上传签名
+    # ==========================
+
+    - name: Upload keystore
+
+      if: steps.keystore.outputs.new == 'true'
+
+      uses: actions/upload-artifact@v4
+
+      with:
+
+        name: Android-keystore
+
+        path: release.keystore
+
+        retention-days: 1
+
+
+
+
+
+    # ==========================
+    # 上传日志
+    # ==========================
+
+    - name: Upload build log
+
+      if: always()
+
+      uses: actions/upload-artifact@v4
+
+      with:
+
+        name: Build-log
+
+        path: buildozer.log
+
+        retention-days: 7
