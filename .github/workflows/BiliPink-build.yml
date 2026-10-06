@@ -27,11 +27,11 @@ jobs:
           source venv/bin/activate
           pip install cython buildozer==1.5.0
 
-      - name: Patch spec，只保留最小组件
+      - name: Regenerate buildozer.spec
         run: |
           source venv/bin/activate
+          rm -f buildozer.spec
           yes | buildozer init
-          # 只编译64位，关闭大量不必要组件
           sed -i 's/^#android.arch =.*/android.arch = arm64‑v8a/' buildozer.spec
           sed -i 's/^android.permissions.*/android.permissions = INTERNET/' buildozer.spec
 
@@ -40,7 +40,6 @@ jobs:
           APP_ANDROID_BUILD_TOOLS_VERSION: "34.0.0"
           ANDROID_HOME: ${{ github.workspace }}/.buildozer/android/platform/android-sdk
           ANDROID_SDK_ROOT: ${{ github.workspace }}/.buildozer/android/platform/android-sdk
-          # 限制编译并发线程数，减少内存峰值！核心！！
           NPROC_MAX: "2"
         run: |
           source venv/bin/activate
