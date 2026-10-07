@@ -3,53 +3,58 @@ name: 构建 APK
 on:
   workflow_dispatch:
 
+# 并发控制：新任务启动，自动取消正在运行/排队的旧任务
+concurrency:
+  group: build-apk-task
+  cancel-in-progress: true
+
 jobs:
   build:
-    runs-on: ubuntu‑latest
+    runs-on: ubuntu-latest
     env:
-      ANDROID_HOME: ${{ github.workspace }}/android‑sdk
-      ANDROID_SDK_ROOT: ${{ github.workspace }}/android‑sdk
+      ANDROID_HOME: ${{ github.workspace }}/.buildozer/android-sdk
+      ANDROID_SDK_ROOT: ${{ github.workspace }}/.buildozer/android-sdk
       PIP_INDEX_URL: https://pypi.tuna.tsinghua.edu.cn/simple
+
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
 
       - name: 安装 Java17
-        uses: actions/setup‑java@v4
+        uses: actions/setup-java@v4
         with:
-          java‑version: '17'
+          java-version: '17'
           distribution: 'temurin'
 
       - name: 设置 Python3.9
-        uses: actions/setup‑python@v4
+        uses: actions/setup-python@v4
         with:
-          python‑version: "3.9"
+          python-version: "3.9"
 
       - name: 安装系统依赖
         run: |
           sudo apt update
-          sudo apt install -y build‑essential git libffi‑dev libssl‑dev libpython3‑dev unzip
+          sudo apt install -y build-essential git libffi-dev libssl-dev libpython3-dev unzip
 
       - name: 安装 buildozer cython
         run: |
           python3 -m pip install --user --upgrade buildozer cython
 
-      - name: 清理全部旧缓存
-        run: |
-          rm -rf ~/.buildozer ./.buildozer $ANDROID_HOME
+      - name: 清理旧buildozer缓存
+        run: rm -rf ~/.buildozer ./.buildozer
 
       - name: 构建APK
         run: |
           export PATH=$PATH:$HOME/.local/bin
           buildozer android debug
 
-      - name: 检查APK
+      - name: 检查APK是否生成
         run: |
           ls -la bin/
           test -f bin/*.apk
 
-      - name: 上传产物
-        uses: actions/upload‑artifact@v4
+      - name: 上传APK产物
+        uses: actions/upload-artifact@v4
         with:
           name: BiliPink‑APK
           path: bin/*.apk
