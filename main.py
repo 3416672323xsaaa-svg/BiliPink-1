@@ -19,8 +19,9 @@ from kivymd.uix.menu import MDDropdownMenu
 from kivy.clock import mainthread
 import threading
 import os
+import time
 
-# 导入你的业务模块
+# 导入业务模块
 from bili_core import BiliCore
 from downloader import Downloader
 
@@ -292,25 +293,27 @@ MDScreen:
 class BiliPink(MDApp):
     def build(self):
         self.theme_cls.primary_palette = "Pink"
-        # 初始化核心对象
         self.bili_core = BiliCore()
         self.downloader = Downloader()
+
         self.video_data = None
+        self.selected_quality = None
+        self.selected_audio = None
         self.quality_list = []
-        self.audio_list = []
-        # 下拉菜单
+        self.audio_list = None
+
         self.menu_quality = None
         self.menu_audio = None
+
+        self.download_running = False
         return Builder.load_string(KV)
 
-    # 点击解析按钮
     def on_click_parse(self):
         input_text = self.root.ids.url.text.strip()
         if not input_text:
             self.root.ids.status.text = "请输入 BV / AV / b23链接"
             return
         self.root.ids.status.text = "解析中，请稍候..."
-        # 开子线程解析，防止UI卡死
         threading.Thread(target=self.parse_task, args=(input_text,), daemon=True).start()
 
     def parse_task(self, url):
@@ -326,7 +329,9 @@ class BiliPink(MDApp):
             self.root.ids.status.text = "解析失败！检查链接或网络"
             return
         self.video_data = info
-        # 填充视频信息卡片
+        self.quality_list = info["quality_list"]
+        self.audio_list = info["audio_list"]
+
         self.root.ids.cover.source = info["cover"]
         self.root.ids.title.text = f"标题: {info['title']}"
         self.root.ids.up.text = f"UP主: {info['up_name']}"
@@ -335,7 +340,6 @@ class BiliPink(MDApp):
         self.root.ids.aid.text = f"AV号: {info['aid']}"
         self.root.ids.cid.text = f"CID: {info['cid']}"
 
-        # 填充数据统计
         self.root.ids.stats.text = f"""
 播放: {info['view']}
 点赞: {info['like']}
@@ -345,7 +349,6 @@ class BiliPink(MDApp):
 弹幕: {info['danmaku']}
 分享: {info['share']}
 """
-        # 填充视频资料
         self.root.ids.detail.text = f"""
 发布时间: {info['pubdate']}
 分区: {info['tname']}
@@ -353,67 +356,111 @@ class BiliPink(MDApp):
 时长: {info['duration_str']}
 尺寸: {info['resolution']}
 """
-        self.quality_list = info["quality_list"]
-        self.audio_list = info["audio_list"]
-        self.root.ids.status.text = "✅解析成功，可以选择清晰度并下载"
+        self.root.ids.codec.text = info.get("codec_text","AVC / HEVC / AV1")
+        self.root.ids.status.text = "✅解析成功，请选择清晰度、音质后下载"
 
     @mainthread
     def parse_failed(self, msg):
         self.root.ids.status.text = f"❌解析错误：{msg}"
 
-    # 清晰度下拉菜单
     def open_quality_menu(self):
         if not self.video_data:
             self.root.ids.status.text = "请先解析视频！"
             return
-        menu_items = []
+        items = []
         for q in self.quality_list:
-            menu_items.append({
+            items.append({
                 "text": q["name"],
                 "on_press": lambda x=q: self.select_quality(x)
             })
-        self.menu_quality = MDDropdownMenu(
-            caller=self.root.ids.quality_btn,
-            items=menu_items,
-            width_mult=4
-        )
+        self.menu_quality = MDDropdownMenu(caller=self.root.ids.quality_btn, items=items, width_mult=4)
         self.menu_quality.open()
 
     def select_quality(self, item):
+        self.selected_quality = item
         self.root.ids.quality_btn.text = item["name"]
         self.menu_quality.dismiss()
 
-    # 音质下拉菜单
     def open_audio_menu(self):
         if not self.video_data:
             self.root.ids.status.text = "请先解析视频！"
             return
-        menu_items = []
+        items = []
         for a in self.audio_list:
-            menu_items.append({
+            items.append({
                 "text": a["name"],
                 "on_press": lambda x=a: self.select_audio(x)
             })
-        self.menu_audio = MDDropdownMenu(
-            caller=self.root.ids.audio_btn,
-            items=menu_items,
-            width_mult=4
-        )
+        self.menu_audio = MDDropdownMenu(caller=self.root.ids.audio_btn, items=items, width_mult=4)
         self.menu_audio.open()
 
     def select_audio(self, item):
+        self.selected_audio = item
         self.root.ids.audio_btn.text = item["name"]
         self.menu_audio.dismiss()
 
-    # 下载按钮（先占位，下一轮补完整下载+进度条逻辑）
+    def download_progress_callback(self, current, total, speed_bps, save_path):
+        pct = (current / total)*100 if total>0 else 0
+        speed_kb = speed_bps / 1024
+        remain_sec = ((total‑current)/speed_bps) if speed_bps>0 else 0
+        self.update_download_ui(pct, speed_kb, remain_sec, save_path)
+
+    @mainthread
+    def update_download_ui(self, percent, speed_kb, remain_sec, save_path):
+        self.root.ids.progress.value = percent
+        self.root.ids.status.text = f"""
+下载中 {percent:.1f}%
+
+速度: {speed_kb:.1f} KB/s
+剩余: {int(remain_sec)}秒
+保存位置: {save_path}
+"""
+
+    @mainthread
+    def download_finish_ui(self, ok, filepath):
+        self.download_running = False
+        self.root.ids.progress.value = 100 if ok else 0
+        if ok:
+            self.root.ids.status.text = f"✅下载完成\n{filepath}"
+        else:
+            self.root.ids.status.text = "❌下载失败"
+
     def on_click_download(self):
+        if self.download_running:
+            self.root.ids.status.text = "正在下载，请勿重复点击"
+            return
         if not self.video_data:
             self.root.ids.status.text = "请先解析视频！"
             return
-        self.root.ids.status.text = "下载功能待接入..."
+        if not self.selected_quality or not self.selected_audio:
+            self.root.ids.status.text = "请选择清晰度和音质！"
+            return
+
+        self.download_running = True
+        self.root.ids.status.text = "开始启动下载任务..."
+        self.root.ids.progress.value = 0
+
+        def dl_thread():
+            try:
+                # 文件名格式：标题[AVxxx][BVxxx]
+                title = self.video_data["title"].replace("/","_").replace("\\","_").replace(":","_")
+                fn_name = f"{title}[AV{self.video_data['aid']}][{self.video_data['bvid']}]"
+
+                ok, out_file = self.downloader.download_by_info(
+                    video_info=self.video_data,
+                    quality_item=self.selected_quality,
+                    audio_item=self.selected_audio,
+                    base_filename=fn_name,
+                    progress_cb=self.download_progress_callback
+                )
+                self.download_finish_ui(ok, out_file)
+            except Exception as e:
+                self.download_finish_ui(False, str(e))
+
+        threading.Thread(target=dl_thread, daemon=True).start()
 
     def on_click_history(self):
-        self.root.ids.status.text = "下载历史待开发"
+        self.root.ids.status.text = "📂下载历史功能待后续扩展"
 
 
 if __name__ == "__main__":
