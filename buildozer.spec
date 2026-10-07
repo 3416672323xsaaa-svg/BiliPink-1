@@ -1,5 +1,4 @@
 [app]
-
 # 应用基础信息
 package.name = bilipink
 package.domain = org.bilipink
@@ -19,8 +18,7 @@ requirements = python3,kivy==2.3.0,kivymd==1.2.0,requests
 # Android设置
 android.api = 33
 android.ndk = 25b
-android.sdk = 24
-android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
+android.permissions = INTERNET,MANAGE_EXTERNAL_STORAGE,READ_MEDIA_VIDEO,READ_MEDIA_AUDIO
 android.allow_backup = True
 
 # 横竖屏
@@ -29,8 +27,8 @@ orientation = portrait
 # 图标（没有可以先留空）
 # icon.filename = icon.png
 
-# 字体
-android.add_assets = NotoSansSC‑Regular.ttf
+# 字体 + assets目录（Action会自动把ffmpeg下载到assets）
+android.add_assets = NotoSansSC-Regular.ttf,assets
 
 # 关闭警告
 log_level = 2
