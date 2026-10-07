@@ -23,6 +23,9 @@ android.allow_backup = True
 orientation = portrait
 log_level = 2
 
+# 新增，很多人漏这个，会导致不输出apk
+android.build_tools_version = 33.0.2
+
 [buildozer]
 log_level = 2
 warn_on_root = 0
