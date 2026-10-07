@@ -1,13 +1,10 @@
 name: Build Kivy Android APK In Debug Mode
-
 on:
   workflow_dispatch:
-
 permissions:
   contents: write
   actions: read
   checks: read
-
 jobs:
   build-android:
     runs-on: ubuntu-latest
@@ -26,25 +23,14 @@ jobs:
         with:
           python-version: '3.9'
 
+      # 使用成熟action安装Android SDK，自带build‑tools，避免wget超时404
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y git zip unzip python3-pip autoconf automake libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev cmake libffi-dev libssl-dev curl libltdl-dev libcairo2-dev libgirepository1.0-dev
-
-      - name: Install Android SDK & Build‑Tools
-        run: |
-          export ANDROID_SDK_ROOT=${{ github.workspace }}/android-sdk
-          mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
-          cd $ANDROID_SDK_ROOT/cmdline-tools
-          wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
-          unzip cmdline-tools.zip
-          mv cmdline-tools latest
-          export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
-          yes | sdkmanager --licenses
-          sdkmanager "platforms;android-33" "build-tools;33.0.2" "platform-tools"
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-          echo "PATH=$ANDROID_SDK_ROOT/build-tools/33.0.2:$PATH" >> $GITHUB_ENV
 
       - name: Install Buildozer
         run: |
@@ -54,17 +40,22 @@ jobs:
 
       - name: Build APK with Buildozer
         run: |
-          export ANDROID_SDK_ROOT=${{ github.workspace }}/android-sdk
-          export ANDROID_HOME=$ANDROID_SDK_ROOT
-          export P4A_ANDROID_SDK=$ANDROID_SDK_ROOT
-          export PATH="$ANDROID_SDK_ROOT/build-tools/33.0.2:$PATH:$HOME/.local/bin"
+          set -e
+          set -o pipefail
+          export PATH="$PATH:$HOME/.local/bin"
           buildozer --version
           buildozer -v android debug 2>&1 | tee buildozer.log
-          find . -type f -name "*.apk" -print -exec cp {} ./ \;
+          echo "===== 搜索APK文件 ====="
+          find . -name "*.apk" -print
+          find . -name "*.apk" -exec cp {} ./ \;
 
       - name: Check if APK was built
         id: check-build
         run: |
+          echo "===== 当前目录内容 ====="
+          ls -la
+          echo "===== 递归搜索APK ====="
+          find . -name "*.apk" -print
           if ls *.apk 1> /dev/null 2>&1; then
             echo "BUILD_FINAL_SUCCESS=true" >> $GITHUB_OUTPUT
             echo "找到APK文件:"
@@ -72,6 +63,20 @@ jobs:
           else
             echo "BUILD_FINAL_SUCCESS=false" >> $GITHUB_OUTPUT
             echo "没有找到APK"
+            echo "===== 诊断信息 ====="
+            echo "-- buildozer目录结构 --"
+            ls -la .buildozer/ 2>/dev/null || echo "无.buildozer目录"
+            echo "-- android目录 --"
+            ls -la .buildozer/android/ 2>/dev/null || echo "无android目录"
+            echo "-- dist目录 --"
+            find .buildozer/android -name "dist" -type d 2>/dev/null | head -5
+            echo "-- 所有apk文件 --"
+            find .buildozer -name "*.apk" 2>/dev/null || echo "buildozer下无apk"
+            echo "-- build-tools目录 --"
+            ls -la .buildozer/android/platform/android-sdk/build-tools/ 2>/dev/null || echo "无build-tools目录"
+            echo "-- 日志末尾100行 --"
+            tail -100 buildozer.log 2>/dev/null || echo "无日志文件"
+            exit 1
           fi
 
       - name: Upload APK artifact
