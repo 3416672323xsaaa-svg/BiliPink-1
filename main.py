@@ -20,7 +20,7 @@ from kivy.clock import mainthread
 import threading
 import os
 
-# 引入你的业务py文件（仓库里必须存在这些文件！！）
+# 导入你的业务模块
 from bili_core import BiliCore
 from downloader import Downloader
 
@@ -296,26 +296,124 @@ class BiliPink(MDApp):
         self.bili_core = BiliCore()
         self.downloader = Downloader()
         self.video_data = None
-        # 清晰度、音质下拉菜单对象预留
+        self.quality_list = []
+        self.audio_list = []
+        # 下拉菜单
         self.menu_quality = None
         self.menu_audio = None
         return Builder.load_string(KV)
 
-    # 按钮占位函数，现在点击只会打印日志，后面填真实逻辑
+    # 点击解析按钮
     def on_click_parse(self):
-        print("点击解析按钮")
+        input_text = self.root.ids.url.text.strip()
+        if not input_text:
+            self.root.ids.status.text = "请输入 BV / AV / b23链接"
+            return
+        self.root.ids.status.text = "解析中，请稍候..."
+        # 开子线程解析，防止UI卡死
+        threading.Thread(target=self.parse_task, args=(input_text,), daemon=True).start()
 
+    def parse_task(self, url):
+        try:
+            info = self.bili_core.get_video_full_info(url)
+            self.set_info_ui(info)
+        except Exception as err:
+            self.parse_failed(str(err))
+
+    @mainthread
+    def set_info_ui(self, info):
+        if not info:
+            self.root.ids.status.text = "解析失败！检查链接或网络"
+            return
+        self.video_data = info
+        # 填充视频信息卡片
+        self.root.ids.cover.source = info["cover"]
+        self.root.ids.title.text = f"标题: {info['title']}"
+        self.root.ids.up.text = f"UP主: {info['up_name']}"
+        self.root.ids.uid.text = f"UID: {info['up_uid']}"
+        self.root.ids.bvid.text = f"BV号: {info['bvid']}"
+        self.root.ids.aid.text = f"AV号: {info['aid']}"
+        self.root.ids.cid.text = f"CID: {info['cid']}"
+
+        # 填充数据统计
+        self.root.ids.stats.text = f"""
+播放: {info['view']}
+点赞: {info['like']}
+投币: {info['coin']}
+收藏: {info['favorite']}
+评论: {info['reply']}
+弹幕: {info['danmaku']}
+分享: {info['share']}
+"""
+        # 填充视频资料
+        self.root.ids.detail.text = f"""
+发布时间: {info['pubdate']}
+分区: {info['tname']}
+类型: 普通视频
+时长: {info['duration_str']}
+尺寸: {info['resolution']}
+"""
+        self.quality_list = info["quality_list"]
+        self.audio_list = info["audio_list"]
+        self.root.ids.status.text = "✅解析成功，可以选择清晰度并下载"
+
+    @mainthread
+    def parse_failed(self, msg):
+        self.root.ids.status.text = f"❌解析错误：{msg}"
+
+    # 清晰度下拉菜单
+    def open_quality_menu(self):
+        if not self.video_data:
+            self.root.ids.status.text = "请先解析视频！"
+            return
+        menu_items = []
+        for q in self.quality_list:
+            menu_items.append({
+                "text": q["name"],
+                "on_press": lambda x=q: self.select_quality(x)
+            })
+        self.menu_quality = MDDropdownMenu(
+            caller=self.root.ids.quality_btn,
+            items=menu_items,
+            width_mult=4
+        )
+        self.menu_quality.open()
+
+    def select_quality(self, item):
+        self.root.ids.quality_btn.text = item["name"]
+        self.menu_quality.dismiss()
+
+    # 音质下拉菜单
+    def open_audio_menu(self):
+        if not self.video_data:
+            self.root.ids.status.text = "请先解析视频！"
+            return
+        menu_items = []
+        for a in self.audio_list:
+            menu_items.append({
+                "text": a["name"],
+                "on_press": lambda x=a: self.select_audio(x)
+            })
+        self.menu_audio = MDDropdownMenu(
+            caller=self.root.ids.audio_btn,
+            items=menu_items,
+            width_mult=4
+        )
+        self.menu_audio.open()
+
+    def select_audio(self, item):
+        self.root.ids.audio_btn.text = item["name"]
+        self.menu_audio.dismiss()
+
+    # 下载按钮（先占位，下一轮补完整下载+进度条逻辑）
     def on_click_download(self):
-        print("点击下载按钮")
+        if not self.video_data:
+            self.root.ids.status.text = "请先解析视频！"
+            return
+        self.root.ids.status.text = "下载功能待接入..."
 
     def on_click_history(self):
-        print("点击下载历史按钮")
-
-    def open_quality_menu(self):
-        print("打开清晰度下拉")
-
-    def open_audio_menu(self):
-        print("打开音质下拉菜单")
+        self.root.ids.status.text = "下载历史待开发"
 
 
 if __name__ == "__main__":
