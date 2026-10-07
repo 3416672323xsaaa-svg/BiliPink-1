@@ -8,14 +8,6 @@ permissions:
   actions: read
   checks: read
 
-env:
-  CYTHON_LANGUAGE_LEVEL: "3"
-  P4A_BOOTSTRAP_DOWNLOAD_HOST: https://mirror.ghproxy.com
-  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx2048m"
-  P4A_ANDROID_SDK: ${{ github.workspace }}/android-sdk
-  ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
-  ANDROID_HOME: ${{ github.workspace }}/android-sdk
-
 jobs:
   build-android:
     runs-on: ubuntu-latest
@@ -24,7 +16,6 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Java 17
-        id: setup-java
         uses: actions/setup-java@v4
         with:
           java-version: '17'
@@ -42,6 +33,7 @@ jobs:
 
       - name: Install Android SDK & Build‑Tools
         run: |
+          export ANDROID_SDK_ROOT=${{ github.workspace }}/android-sdk
           mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
           cd $ANDROID_SDK_ROOT/cmdline-tools
           wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
@@ -50,8 +42,9 @@ jobs:
           export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
           yes | sdkmanager --licenses
           sdkmanager "platforms;android-33" "build-tools;33.0.2" "platform-tools"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
           echo "PATH=$ANDROID_SDK_ROOT/build-tools/33.0.2:$PATH" >> $GITHUB_ENV
-          echo "P4A_ANDROID_SDK=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
 
       - name: Install Buildozer
         run: |
@@ -61,10 +54,10 @@ jobs:
 
       - name: Build APK with Buildozer
         run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          export P4A_ANDROID_SDK=$ANDROID_SDK_ROOT
+          export ANDROID_SDK_ROOT=${{ github.workspace }}/android-sdk
           export ANDROID_HOME=$ANDROID_SDK_ROOT
-          export ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT
+          export P4A_ANDROID_SDK=$ANDROID_SDK_ROOT
+          export PATH="$ANDROID_SDK_ROOT/build-tools/33.0.2:$PATH:$HOME/.local/bin"
           buildozer --version
           buildozer -v android debug 2>&1 | tee buildozer.log
           find . -type f -name "*.apk" -print -exec cp {} ./ \;
