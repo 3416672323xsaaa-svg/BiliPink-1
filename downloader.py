@@ -1,148 +1,104 @@
-from pathlib import Path
-import threading
-import re
-import uuid
-import json
+import os
+import time
 import requests
-
+import subprocess
+import shutil
+import re
+from kivy.resources import resource_find
 
 class Downloader:
-    def __init__(self, save_root: str = None):
-        if save_root is None:
-            try:
-                from kivy.app import App
-                app = App.get_running_app()
-                save_root = Path(app.user_data_dir) / "Downloads"
-            except Exception:
-                save_root = Path("./Downloads")
+    def __init__(self):
+        self.session = requests.Session()
+        self.session.headers.update({
+            "User-Agent":"Mozilla/5.0 Android",
+            "Referer":"https://www.bilibili.com/"
+        })
 
-        self.save_root = Path(save_root)
-        self.save_root.mkdir(exist_ok=True, parents=True)
-        self.running_tasks = {}
-        self.api = None
+    def _download_file(self, url, save_path, offset, progress_cb, file_label):
+        resp = self.session.get(url, stream=True, timeout=30)
+        resp.raise_for_status()
+        local_total = int(resp.headers.get('content-length',0))
+        downloaded = 0
+        chunk_size = 1024*128
+        start_time = time.time()
 
-    @staticmethod
-    def extract_bv(text: str):
-        bv_match = re.search(r"BV[a-zA-Z0-9]{10}", text)
-        av_match = re.search(r"av(\d+)", text, re.IGNORECASE)
-        if bv_match:
-            return bv_match.group(0)
-        if av_match:
-            return f"av{av_match.group(1)}"
-        return None
-
-    @staticmethod
-    def clean_filename(name: str) -> str:
-        cleaned = re.sub(r'[\/:*?"<>|]', "", name).strip()
-        if len(cleaned) > 180:
-            cleaned = cleaned[:180]
-        return cleaned
-
-    def _download_cover(self, cover_url, save_path):
-        try:
-            resp = requests.get(cover_url, timeout=12)
-            resp.raise_for_status()
-            with open(save_path, "wb") as f:
-                f.write(resp.content)
-            return True
-        except Exception:
-            return False
-
-    def _download_file(self, url, filepath, callback=None):
-        headers = {
-            "User‑Agent": "Mozilla/5.0 (Android; Mobile)",
-            "Referer": "https://www.bilibili.com"
-        }
-        resp = requests.get(url, headers=headers, stream=True, timeout=20)
-        total_size = int(resp.headers.get('content‑length', 0))
-        downloaded_size = 0
-        chunk_size = 1024 * 128
-        with open(filepath, "wb") as f:
+        with open(save_path, "wb") as f:
             for chunk in resp.iter_content(chunk_size=chunk_size):
                 if chunk:
                     f.write(chunk)
-                    downloaded_size += len(chunk)
-                    if total_size > 0 and callback:
-                        pct = round((downloaded_size / total_size)*100,1)
-                        callback(f"下载进度：{pct}%")
-        if callback:
-            callback("文件分片下载完成")
+                    downloaded += len(chunk)
+                    elapsed = time.time() - start_time
+                    speed_bps = chunk_size / elapsed if elapsed>0 else 0
+                    global_downloaded = offset + downloaded
+                    progress_cb(global_downloaded, offset+local_total, speed_bps, f"{file_label}: {downloaded/local_total*100:.1f}%")
+        return local_total
 
-    def download(self, bv, mode, quality, callback=None):
-        """
-        bv: BV号
-        mode: "视频+音频"/"只下载视频"/"只下载音频"
-        quality: 清晰度标识
-        callback: 状态回调函数
-        return task_id 字符串 / None
-        """
-        # 延迟导入BiliAPI，避免顶层导入连锁崩溃
-        from bili_api import BiliAPI
-        if self.api is None:
-            self.api = BiliAPI()
+    def _ffmpeg_merge_with_progress(self, ffmpeg_bin, video_path, audio_path, out_path, progress_cb):
+        cmd = [
+            ffmpeg_bin,
+            "-i", video_path,
+            "-i", audio_path,
+            "-c", "copy",
+            "-y", out_path,
+            "-progress", "pipe:1",
+            "-v", "error"
+        ]
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        time_regex = re.compile(r"out_time_ms=(\d+)")
+        duration_regex = re.compile(r"duration=(\d+\.\d+)")
+        duration_sec = None
 
-        task_id = str(uuid.uuid4())
-
-        def worker():
+        while proc.poll() is None:
             try:
-                if callback:
-                    callback("准备下载任务")
-                video_info = self.api.get_info(bv)
-                if not video_info:
-                    if callback:
-                        callback("获取视频信息失败")
-                    return None
+                line = proc.stdout.readline()
+            except TimeoutError:
+                continue
+            if not line:
+                continue
+            dur_match = duration_regex.search(line)
+            if dur_match:
+                duration_sec = float(dur_match.group(1))
+            t_match = time_regex.search(line)
+            if t_match and duration_sec:
+                current_ms = int(t_match.group(1))
+                pct = current_ms / (duration_sec * 1000)
+                progress_cb(int(pct*10000),10000, 0, f"合并中: {pct*100:.1f}%")
+        return proc.returncode == 0
 
-                out_dir = self.save_root / task_id
-                out_dir.mkdir(exist_ok=True)
+    def download_by_info(self, video_info, quality_item, audio_item, base_filename, progress_cb):
+        save_dir = "/storage/emulated/0/Download/BiliPink" if os.name == "posix" else "./BiliPink"
+        os.makedirs(save_dir, exist_ok=True)
+        temp_dir = os.path.join(save_dir, "tmp")
+        os.makedirs(temp_dir, exist_ok=True)
 
-                title_raw = video_info["title"]
-                aid = video_info["aid"]
-                cid = video_info["cid"]
+        video_tmp = os.path.join(temp_dir, "video.m4s")
+        audio_tmp = os.path.join(temp_dir, "audio.m4s")
+        out_mp4 = os.path.join(save_dir, f"{base_filename}.mp4")
 
-                if aid:
-                    full_name = f"{title_raw} [{bv}][av{aid}]"
-                else:
-                    full_name = f"{title_raw} [{bv}]"
-                safe_filename = self.clean_filename(full_name)
+        try:
+            video_url = video_info["video_streams"][quality_item["id"]]
+            audio_url = video_info["audio_streams"][audio_item["id"]]
 
-                meta = {
-                    "task_id": task_id,
-                    "title": title_raw,
-                    "bvid": bv,
-                    "aid": aid,
-                    "cid": cid
-                }
-                meta_file = out_dir / "meta.json"
-                with open(meta_file, "w", encoding="utf‑8") as f:
-                    json.dump(meta, f, ensure_ascii=False, indent=2)
+            # 下载视频流
+            self._download_file(video_url, video_tmp, 0, progress_cb, "视频流")
+            # 下载音频流，offset分段
+            self._download_file(audio_url, audio_tmp, 5000, progress_cb, "音频流")
 
-                cover_url = video_info.get("cover")
-                if cover_url and callback:
-                    callback("保存封面")
-                    self._download_cover(cover_url, out_dir / "cover.jpg")
+            ffmpeg_path = resource_find("assets/ffmpeg")
+            if not ffmpeg_path:
+                raise Exception("APK assets目录找不到ffmpeg二进制！")
+            os.chmod(ffmpeg_path, 0o755)
 
-                # 获取音视频直链
-                play_data = self.api.get_download_url(bv)
-                video_url = play_data["video_urls"].get(str(quality))
-                audio_url = play_data["audio_url"]
+            merge_ok = self._ffmpeg_merge_with_progress(ffmpeg_path, video_tmp, audio_tmp, out_mp4, progress_cb)
+            if not merge_ok:
+                raise Exception("FFmpeg合并失败")
 
-                if mode in ("视频+音频", "只下载视频") and video_url:
-                    self._download_file(video_url, out_dir / f"{safe_filename}.mp4", callback)
-                if mode in ("视频+音频", "只下载音频") and audio_url:
-                    self._download_file(audio_url, out_dir / f"{safe_filename}.m4a", callback)
+        finally:
+            # 成功/失败都会清理临时文件
+            if os.path.exists(video_tmp):
+                os.remove(video_tmp)
+            if os.path.exists(audio_tmp):
+                os.remove(audio_tmp)
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
-                if callback:
-                    callback("✅全部下载完成（视频音频分开保存）")
-
-            except Exception as e:
-                if callback:
-                    callback(f"下载异常：{str(e)}")
-            finally:
-                if task_id in self.running_tasks:
-                    del self.running_tasks[task_id]
-
-        thr = threading.Thread(target=worker, daemon=True)
-        self.running_tasks[task_id] = thr
-        thr.start()
-        return task_id
+        return (True, out_mp4)
