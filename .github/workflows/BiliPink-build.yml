@@ -34,3 +34,9 @@ jobs:
         run: |
           export PATH=$PATH:$HOME/.local/bin
           buildozer android debug
+
+      - name: 上传APK成品
+        uses: actions/upload-artifact@v4
+        with:
+          name: BiliPink_APK
+          path: bin/*.apk
