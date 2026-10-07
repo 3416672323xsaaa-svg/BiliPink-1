@@ -1,19 +1,7 @@
 name: Build Kivy Android APK In Debug Mode
 
 on:
-  workflow_dispatch:
-
-permissions:
-  contents: write
-  actions: read
-  checks: read
-
-env:
-  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-  ANDROID_HOME: /usr/local/lib/android/sdk
-  JAVA_HOME: /usr/lib/jvm/temurin-17-jdk-amd64
-  CYTHON_LANGUAGE_LEVEL: "3"
-  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.java-home=$JAVA_HOME -Dorg.gradle.jvmargs=-Xmx2048m"
+  workflow_dispatch
 
 jobs:
   build-android:
@@ -34,12 +22,12 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y git zip unzip openjdk-17-jdk python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtiff5-dev libjpeg-dev libpng-dev libfreetype6-dev libffi-dev libssl-dev libcairo2-dev
 
-    - name: Install buildozer & python‑for‑android
+    - name: Install buildozer
       run: |
         pip3 install --upgrade pip
-        pip3 install buildozer python-for-android
+        pip3 install buildozer
 
-    - name: Generate buildozer.spec
+    - name: Create buildozer.spec
       run: |
         cat > buildozer.spec <<'EOF'
 [app]
@@ -66,21 +54,18 @@ log_level = 2
 warn_on_root = 0
 EOF
 
-    - name: Build APK with Buildozer
+    - name: Build APK
       run: |
         export PATH="$HOME/.local/bin:$PATH"
         buildozer android debug
 
-    - name: Check if APK was built
-      run: ls -la bin/ || true
-
-    - name: Upload APK artifact
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: built-apk
         path: bin/*.apk
 
-    - name: Upload build logs
+    - name: Upload logs
       uses: actions/upload-artifact@v4
       with:
         name: build-logs
