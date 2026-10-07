@@ -111,29 +111,38 @@ class BiliPink(App):
     def update_status(self, text):
         self.status.text = text
 
+    def _parse_worker(self,bv):
+        try:
+            data = self.api.get_info(bv)
+            if data:
+                def ui_update(dt):
+                    self.cover.source = data["cover"]
+                    self.info.text = (
+                        f"标题：{data['title']}\n"
+                        f"UP主：{data['owner']}\nUID：{data['uid']}\n"
+                        f"▶播放:{data['view']} 👍赞:{data['like']}\n"
+                        f"🪙币:{data['coin']} ⭐收藏:{data['favorite']}"
+                    )
+                    qualities = self.formatter.get_quality(bv)
+                    if qualities:
+                        self.quality.values = qualities
+                        self.quality.text = qualities[0]
+                    self.safe_update_status("✅解析成功")
+                Clock.schedule_once(ui_update,0)
+            else:
+                self.safe_update_status("❌获取视频信息失败")
+        except Exception as e:
+            self.safe_update_status(f"解析异常:{str(e)}")
+
     def parse_video(self, btn):
         bv = self.core.convert(self.input.text.strip())
         if not bv:
             self.safe_update_status("无法识别链接")
             return
-
         self.current_bv = bv
-        data = self.api.get_info(bv)
-        if data:
-            self.cover.source = data["cover"]
-            self.info.text = (
-                f"标题：{data['title']}\n"
-                f"UP主：{data['owner']}\nUID：{data['uid']}\n"
-                f"▶播放:{data['view']} 👍赞:{data['like']}\n"
-                f"🪙币:{data['coin']} ⭐收藏:{data['favorite']}"
-            )
-            qualities = self.formatter.get_quality(bv)
-            if qualities:
-                self.quality.values = qualities
-                self.quality.text = qualities[0]
-            self.safe_update_status("✅解析成功")
-        else:
-            self.safe_update_status("❌获取视频信息失败")
+        self.safe_update_status("🔍正在解析...")
+        # 解析网络请求放到后台子线程，防止主线阻塞闪退
+        threading.Thread(target=self._parse_worker,args=(bv,),daemon=True).start()
 
     def _download_worker(self):
         """真正下载跑在后台子线程，不卡死/闪退APP"""
