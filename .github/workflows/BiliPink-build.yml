@@ -3,7 +3,6 @@ name: 构建 APK
 on:
   workflow_dispatch:
 
-# 并发控制：新任务启动，自动取消正在运行/排队的旧任务
 concurrency:
   group: build-apk-task
   cancel-in-progress: true
@@ -43,13 +42,24 @@ jobs:
       - name: 清理旧buildozer缓存
         run: rm -rf ~/.buildozer ./.buildozer
 
+      # 预先接受Android SDK全部许可
+      - name: Accept SDK Licenses
+        run: |
+          export PATH=$PATH:$HOME/.local/bin
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
       - name: 构建APK
         run: |
           export PATH=$PATH:$HOME/.local/bin
-          set -o pipefail
           buildozer android debug
 
       - name: 检查APK是否生成
         run: |
           ls -la bin/
           test -f bin/*.apk
+
+      - name: 上传APK产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: BiliPink‑APK
+          path: bin/*.apk
