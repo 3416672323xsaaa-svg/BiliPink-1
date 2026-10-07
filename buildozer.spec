@@ -1,30 +1,35 @@
 [app]
-title = BiliPink
-package.name = bilipink
-package.domain = org.bilipink
+
+# 包名，只能小写字母数字，不能有中文
+package.name = bilidownload
+package.domain = org.bili.dl
+
 source.dir = .
-source.include_exts = py,png,jpg,jpeg,json,ttf
+source.include_exts = py,png,jpg,jpeg,svg,ttf,txt
 source.exclude_dirs = tests, bin, .git
 
+# 应用版本
 version = 0.1
-package.version = 0.1
 
-app.mainmodule = main.py
+# 要安装的依赖，kivy**不要写版本号**
+requirements = python3,kivy,requests
 
-requirements = python3,kivy==2.3.0,kivymd==1.2.0,requests
-
+# 安卓配置
 android.api = 33
 android.ndk = 25b
-android.accept_sdk_license = True
+android.sdk = 24
+android.archs = arm64‑v8a
+android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
 
-android.permissions = INTERNET,MANAGE_EXTERNAL_STORAGE,READ_MEDIA_VIDEO,READ_MEDIA_AUDIO
-android.allow_backup = True
-
+# 应用界面设置
+fullscreen = 0
 orientation = portrait
-log_level = 2
 
-# 新增，很多人漏这个，会导致不输出apk
-android.build_tools_version = 33.0.2
+# 图标
+icon.filename = icon.png
+
+# 日志
+log_level = 2
 
 [buildozer]
 log_level = 2
