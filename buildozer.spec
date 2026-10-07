@@ -12,7 +12,8 @@ android.api = 33
 android.minapi = 21
 android.ndk = 25b
 
-requirements = python3,kivy,requests,yt-dlp
+# 先移除yt‑dlp，先保证APK能编译出来
+requirements = python3,kivy,requests
 
 android.permissions = WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
 fullscreen = 0
