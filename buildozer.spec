@@ -19,9 +19,7 @@ fullscreen = 0
 orientation = portrait
 log_level = 2
 
-# 注意！！这一行不在[app]括号内部！！写在[app]段落结束之后！
-accept_sdk_license = True
-
 [buildozer]
 log_level = 2
 warn_on_root = 0
+accept_sdk_license = True
