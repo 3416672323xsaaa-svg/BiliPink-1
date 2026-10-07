@@ -1,35 +1,40 @@
 [app]
 
-title = BiliPink
+# 应用基础信息
 package.name = bilipink
 package.domain = org.bilipink
-
 source.dir = .
-source.include_exts = py,png,jpg,jpeg,json,kv
+source.include_exts = py,png,jpg,jpeg,json,ttf
+source.exclude_dirs = tests, bin, .git
 
-version = 1.0
-requirements = python3,kivy,requests
+# 版本
+version = 0.1
 
-entrypoint = main.py
+# 主程序入口
+app.mainmodule = main.py
 
-orientation = portrait
-fullscreen = 0
+# KivyMD依赖
+requirements = python3,kivy==2.3.0,kivymd==1.2.0,requests
 
-android.permissions = INTERNET,READ_MEDIA_VIDEO,READ_MEDIA_IMAGES
-android.permissions_api33plus = INTERNET,READ_MEDIA_VIDEO,READ_MEDIA_IMAGES
-
-android.accept_sdk_license = True
+# Android设置
 android.api = 33
-android.minapi = 21
-
 android.ndk = 25b
-android.sdk = 33
+android.sdk = 24
+android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
+android.allow_backup = True
 
-android.archs = arm64-v8a
-p4a.bootstrap = sdl2
+# 横竖屏
+orientation = portrait
 
-exclude_patterns = **/test/*,**/tests/*
+# 图标（没有可以先留空）
+# icon.filename = icon.png
+
+# 字体
+android.add_assets = NotoSansSC‑Regular.ttf
+
+# 关闭警告
+log_level = 2
 
 [buildozer]
 log_level = 2
-warn_on_root = 1
+warn_on_root = 0
