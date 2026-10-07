@@ -1,13 +1,12 @@
 name: 构建 APK
 
+# 只允许手动点击按钮运行，push代码不会自动触发
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu‑latest
+    runs-on: ubuntu-latest
     env:
       ANDROID_HOME: /usr/local/lib/android/sdk
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
@@ -18,20 +17,20 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 安装 Java17
-        uses: actions/setup‑java@v4
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
       - name: 设置 Python3.9
-        uses: actions/setup‑python@v4
+        uses: actions/setup-python@v4
         with:
           python-version: "3.9"
 
       - name: 安装系统依赖
         run: |
           sudo apt update
-          sudo apt install -y build‑essential git libffi‑dev libssl‑dev libpython3‑dev unzip
+          sudo apt install -y build-essential git libffi-dev libssl-dev libpython3-dev unzip
 
       - name: 安装 buildozer cython
         run: |
@@ -48,7 +47,7 @@ jobs:
           test -f bin/*.apk
 
       - name: 上传APK产物
-        uses: actions/upload‑artifact@v4
+        uses: actions/upload-artifact@v4
         with:
           name: B站下载器APK
           path: bin/*.apk
