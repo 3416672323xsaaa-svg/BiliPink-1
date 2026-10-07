@@ -39,9 +39,9 @@ jobs:
         pip3 install --upgrade pip
         pip3 install buildozer python-for-android
 
-    - name: Generate brand‑new buildozer.spec
+    - name: Generate buildozer.spec
       run: |
-        cat > buildozer.spec << 'EOF'
+        cat > buildozer.spec <<'EOF'
 [app]
 title = BiliPink
 package.name = bilipink
