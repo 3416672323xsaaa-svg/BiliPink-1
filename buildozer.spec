@@ -1,8 +1,6 @@
 [app]
 package.name = biliparser
 package.domain = org.biliparser
-
-# 漏掉这个title就直接报错！！
 title = BiliPink
 
 source.dir = .
@@ -14,10 +12,9 @@ android.api = 33
 android.minapi = 21
 android.ndk = 25b
 
-requirements = python3,kivy,requests,yt_dlp
+requirements = python3,kivy,requests,yt-dlp
 
-android.permissions = WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,INTERNET,ACCESS_NETWORK_STATE
-
+android.permissions = WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
 fullscreen = 0
 orientation = portrait
 
