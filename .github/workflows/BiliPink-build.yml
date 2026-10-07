@@ -7,8 +7,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      ANDROID_HOME: /usr/local/lib/android/sdk
-      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      ANDROID_HOME: ${{ github.workspace }}/.buildozer/android-sdk
+      ANDROID_SDK_ROOT: ${{ github.workspace }}/.buildozer/android-sdk
       PIP_INDEX_URL: https://pypi.tuna.tsinghua.edu.cn/simple
 
     steps:
@@ -35,15 +35,13 @@ jobs:
         run: |
           python3 -m pip install --user --upgrade buildozer cython
 
-      - name: 接受Android SDK许可协议
-        run: |
-          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
-          yes | sdkmanager --licenses || true
+      - name: 清理旧buildozer缓存
+        run: rm -rf ~/.buildozer ./.buildozer
 
       - name: 构建APK
         run: |
           export PATH=$PATH:$HOME/.local/bin
-          buildozer android debug
+          yes | buildozer android debug
 
       - name: 检查APK是否生成
         run: |
