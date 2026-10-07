@@ -30,10 +30,7 @@ jobs:
           mv ffmpeg-master-latest-linuxarm64-gpl/bin/ffmpeg assets/
           chmod +x assets/ffmpeg
 
-      - name: 接受Android SDK协议
-        run: yes | sdkmanager --licenses || true
-
       - name: 构建APK
         run: |
           export PATH=$PATH:$HOME/.local/bin
-          buildozer android debug deploy run
+          buildozer android debug
