@@ -18,6 +18,8 @@ android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
 fullscreen = 0
 orientation = portrait
 log_level = 2
+
+# 注意！！这一行不在[app]括号内部！！写在[app]段落结束之后！
 accept_sdk_license = True
 
 [buildozer]
