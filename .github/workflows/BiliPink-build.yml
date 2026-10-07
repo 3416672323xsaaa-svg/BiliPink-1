@@ -8,14 +8,14 @@ permissions:
   actions: read
   checks: read
 
+env:
+  CYTHON_LANGUAGE_LEVEL: "3"
+  P4A_BOOTSTRAP_DOWNLOAD_HOST: https://mirror.ghproxy.com
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx2048m"
+
 jobs:
   build-android:
     runs-on: ubuntu-latest
-    env:
-      CYTHON_LANGUAGE_LEVEL: "3"
-      P4A_BOOTSTRAP_DOWNLOAD_HOST: https://mirror.ghproxy.com
-      GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx2048m"
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -43,13 +43,13 @@ jobs:
         run: |
           mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
           cd $ANDROID_SDK_ROOT/cmdline-tools
-          wget https://dl.google.com/android/repository/cmdline-tools-linux-10.0.zip
-          unzip cmdline-tools-linux-10.0.zip
+          wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
+          unzip cmdline-tools.zip
           mv cmdline-tools latest
           export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
           yes | sdkmanager --licenses
           sdkmanager "platforms;android-33" "build-tools;33.0.2" "platform-tools"
-          echo "PATH=$ANDROID_SDK_ROOT/build-tools/33.0.2:$PATH" >> $GITHUB_ENV
+          echo "PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH" >> $GITHUB_ENV
 
       - name: Install Buildozer
         run: |
