@@ -2,6 +2,9 @@
 package.name = biliparser
 package.domain = org.biliparser
 
+# 漏掉这个title就直接报错！！
+title = BiliPink
+
 source.dir = .
 source.include_exts = py,png,jpg,jpeg,json,txt
 
@@ -13,15 +16,12 @@ android.ndk = 25b
 
 requirements = python3,kivy,requests,yt_dlp
 
-# 权限
 android.permissions = WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,INTERNET,ACCESS_NETWORK_STATE
 
 fullscreen = 0
 orientation = portrait
 
 log_level = 2
-
-# 关键：禁止buildozer自动调用sdkmanager去下载组件，尽量复用已下载SDK
 android.accept_license = True
 android.skip_update = True
 
