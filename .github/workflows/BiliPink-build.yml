@@ -46,15 +46,10 @@ jobs:
       - name: 构建APK
         run: |
           export PATH=$PATH:$HOME/.local/bin
+          set -o pipefail
           buildozer android debug
 
       - name: 检查APK是否生成
         run: |
           ls -la bin/
           test -f bin/*.apk
-
-      - name: 上传APK产物
-        uses: actions/upload-artifact@v4
-        with:
-          name: BiliPink‑APK
-          path: bin/*.apk
